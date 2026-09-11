@@ -181,11 +181,12 @@ export default function Blogs() {
   const [visibleCount, setVisibleCount] = useState(6);
   const [activeDomain, setActiveDomain] = useState<string>(() => {
     if (typeof window !== 'undefined') {
-      return window.location.hostname.includes('pentacloudconsulting.com')
-        ? 'pentacloudconsulting.com'
-        : 'pentacloud.in';
+      const host = window.location.hostname;
+      return (host.endsWith('.in') || host.includes('pentacloud.in'))
+        ? 'pentacloud.in'
+        : 'pentacloudconsulting.com';
     }
-    return 'pentacloud.in';
+    return 'pentacloudconsulting.com';
   });
 
   const loadBlogsForDomain = (domainName: string) => {
@@ -199,8 +200,10 @@ export default function Blogs() {
 
   // ── Fetch live blogs from active domain API ──
   useEffect(() => {
-    const currentHost = typeof window !== 'undefined' ? window.location.hostname : 'pentacloud.in';
-    const initialDomain = currentHost.includes('pentacloudconsulting.com') ? 'pentacloudconsulting.com' : 'pentacloud.in';
+    const currentHost = typeof window !== 'undefined' ? window.location.hostname : '';
+    const initialDomain = (currentHost.endsWith('.in') || currentHost.includes('pentacloud.in'))
+      ? 'pentacloud.in'
+      : 'pentacloudconsulting.com';
     loadBlogsForDomain(initialDomain);
   }, []);
 

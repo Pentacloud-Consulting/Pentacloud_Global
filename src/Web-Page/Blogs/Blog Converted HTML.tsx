@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { Calendar, Clock, User, MapPin, Phone, Mail, RefreshCw } from 'lucide-react';
+import ContactPhone from "@/Component/ContactPhone";
 
 export function BlogConvertedHTML({ blog }: { blog: any }) {
 
@@ -1020,7 +1021,7 @@ export function BlogConvertedHTML({ blog }: { blog: any }) {
                                   </div>
                                   <div className="pc-contact-info-item">
                                       <span className="pc-contact-icon text-blue-600"><Phone size={18} /></span>
-                                      <span>{blog.sidebar_phone || '+971 545 132 807'}</span>
+                                      <span><ContactPhone /></span>
                                   </div>
                                   <div className="pc-contact-info-item">
                                       <span className="pc-contact-icon text-blue-600"><Mail size={18} /></span>

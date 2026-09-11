@@ -3,6 +3,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { ShieldAlert, Database, Fingerprint, Lock, Share2, HelpCircle, Mail } from "lucide-react";
+import ContactPhone from "@/Component/ContactPhone";
 
 const policyContent = [
   {
@@ -141,9 +142,9 @@ const PrivacyPolicy = () => {
             <a href="mailto:contactus@pentacloudconsulting.com" className="font-nunito font-bold text-[#1A7FD4] hover:text-[#0D5FA3] transition-colors text-sm sm:text-base">
               contactus@pentacloudconsulting.com
             </a>
-            <a href="tel:+971545132807" className="font-inter font-bold text-slate-600 text-xs sm:text-sm">
-              +971 545 132 807
-            </a>
+            <span className="font-inter font-bold text-slate-600 text-xs sm:text-sm">
+              <ContactPhone />
+            </span>
           </div>
         </motion.div>
 

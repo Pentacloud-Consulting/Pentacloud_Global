@@ -3,6 +3,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import ContactPhone from "@/Component/ContactPhone";
 
 const CTA = () => {
   return (
@@ -89,7 +90,7 @@ const CTA = () => {
               className="text-center sm:text-right"
             >
               <span className="block font-['Inter'] text-[11px] text-white/50 mb-0.5">Or reach us at</span>
-              <span className="font-['Nunito'] font-semibold text-[13px] text-white/90">+971 545 132 807</span>
+              <span className="font-['Nunito'] font-semibold text-[13px] text-white/90"><ContactPhone /></span>
             </motion.div>
           </div>
         </div>

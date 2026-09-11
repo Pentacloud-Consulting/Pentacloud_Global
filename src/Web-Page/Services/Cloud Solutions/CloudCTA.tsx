@@ -6,6 +6,7 @@ import {
   Activity, DollarSign, Server, Shield, Cloud, ChevronDown, Phone, ArrowRight, CheckCircle2, Zap
 } from "lucide-react";
 import CountUp from "react-countup";
+import ContactPhone from "@/Component/ContactPhone";
 
 const CloudCTA = () => {
   const stats = [
@@ -140,7 +141,7 @@ const CloudCTA = () => {
             </button>
             <button className="bg-transparent text-white font-nunito font-bold px-5 py-3 sm:px-10 sm:py-5 rounded-full border-2 border-white hover:bg-white/10 transition-all flex items-center justify-center gap-2 text-xs sm:text-base cursor-pointer">
               <Phone className="w-4 h-4 shrink-0" />
-              <span>Call +971 545 132 807</span>
+              <span>Call <ContactPhone /></span>
             </button>
           </div>
 

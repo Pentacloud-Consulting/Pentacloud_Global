@@ -4,6 +4,8 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Phone, Globe2, Share2, Copy, Check, Loader2, X } from "lucide-react";
 import { CLAY_CARD } from "./Constants";
+import ContactPhone from "@/Component/ContactPhone";
+import { getDomainConfig } from "@/Web-Page/Blogs/Dynamic Change Blog";
 
 const locations = [
   {
@@ -60,7 +62,8 @@ const ContactLocations = () => {
   const handleShare = () => {
     if (activeLocation !== null) {
       const loc = locations[activeLocation];
-      const textToCopy = `${loc.label}\n${loc.address}\nPhone: ${loc.phone}\nMap: https://www.openstreetmap.org/?mlat=${loc.lat}&mlon=${loc.lon}#map=${loc.zoom}/${loc.lat}/${loc.lon}`;
+      const phoneString = getDomainConfig().contactPhone;
+      const textToCopy = `${loc.label}\n${loc.address}\nPhone: ${phoneString}\nMap: https://www.openstreetmap.org/?mlat=${loc.lat}&mlon=${loc.lon}#map=${loc.zoom}/${loc.lat}/${loc.lon}`;
       navigator.clipboard.writeText(textToCopy);
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
@@ -102,7 +105,7 @@ const ContactLocations = () => {
                 <div className="flex gap-2.5 items-center">
                   <Phone size={13} className="text-[#4A6080] shrink-0" />
                   <span className="font-nunito font-bold text-[#0D1B2A] text-[11px] sm:text-[13px]">
-                    {loc.phone}
+                    <ContactPhone />
                   </span>
                 </div>
               </div>

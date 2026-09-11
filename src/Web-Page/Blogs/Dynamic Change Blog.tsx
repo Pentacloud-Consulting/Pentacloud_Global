@@ -19,26 +19,26 @@ export function getDomainConfig(host?: string): DomainConfig {
     hostname = window.location.hostname;
   }
 
-  const isConsulting = hostname.includes('pentacloudconsulting.com');
+  const isIndia = hostname.endsWith('.in') || hostname.includes('pentacloud.in');
 
-  if (isConsulting) {
+  if (isIndia) {
     return {
-      domainName: 'pentacloudconsulting.com',
-      siteTitle: 'Pentacloud Consulting',
-      wpApiUrl: 'https://pentacloudconsulting.com',
-      canonicalBase: 'https://pentacloudconsulting.com',
+      domainName: 'pentacloud.in',
+      siteTitle: 'Pentacloud Consulting India',
+      wpApiUrl: 'https://pentacloud.in',
+      canonicalBase: 'https://pentacloud.in',
       contactEmail: 'contactus@pentacloudconsulting.com',
-      contactPhone: '+971 545 132 807',
+      contactPhone: '+91 8147897286',
     };
   }
 
   return {
-    domainName: 'pentacloud.in',
-    siteTitle: 'Pentacloud Consulting India',
-    wpApiUrl: 'https://pentacloud.in',
-    canonicalBase: 'https://pentacloud.in',
+    domainName: 'pentacloudconsulting.com',
+    siteTitle: 'Pentacloud Consulting',
+    wpApiUrl: 'https://pentacloudconsulting.com',
+    canonicalBase: 'https://pentacloudconsulting.com',
     contactEmail: 'contactus@pentacloudconsulting.com',
-    contactPhone: '+91 8147897286',
+    contactPhone: '+971 545 132 807',
   };
 }
 

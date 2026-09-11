@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import { ViewBlog } from '../../../Web-Page/Blogs/View Blog';
 import { fetchSingleBlogForDomain, getDomainConfig } from '../../../Web-Page/Blogs/Dynamic Change Blog';
+import { decodeHtmlEntities } from '../../../Web-Page/Blogs/Blog Saveed';
 
 interface BlogPostPageProps {
   params: Promise<{ slug: string }>;
@@ -97,12 +98,16 @@ async function getWpPostBySlug(slug: string) {
 
       const featuredMedia = post._embedded?.['wp:featuredmedia']?.[0]?.source_url || '';
       const content = post.content?.rendered || '';
-      const excerpt = post.excerpt?.rendered ? post.excerpt.rendered.replace(/<[^>]*>?/gm, '').trim() : '';
+      const rawExcerpt = post.excerpt?.rendered ? post.excerpt.rendered.replace(/<[^>]*>?/gm, '').trim() : '';
+      const excerpt = decodeHtmlEntities(rawExcerpt);
 
       const config = getDomainConfig(domain);
 
+      const rawTitle = post.title?.rendered ? post.title.rendered.replace(/<[^>]*>?/gm, '').trim() : 'Blog Post';
+      const title = decodeHtmlEntities(rawTitle);
+
       return {
-        title: post.title?.rendered ? post.title.rendered.replace(/<[^>]*>?/gm, '').trim() : 'Blog Post',
+        title,
         slug: post.slug,
         content,
         excerpt,

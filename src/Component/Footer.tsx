@@ -19,6 +19,7 @@ import {
 import Link from "next/link";
 import Image from "next/image";
 import CTA from "@/Web-Page/Landing/CTA";
+import ContactPhone from "@/Component/ContactPhone";
 
 const socialLinks = [
   {
@@ -141,7 +142,7 @@ const Footer = () => {
                     <Phone className="w-3 h-3 text-white/70 group-hover:text-white transition-colors" />
                   </div>
                   <span className="text-white/70 text-xs group-hover:text-white transition-colors">
-                    +971 545 132 807
+                    <ContactPhone />
                   </span>
                 </li>
                 <li className="flex items-center gap-2.5 group cursor-pointer">

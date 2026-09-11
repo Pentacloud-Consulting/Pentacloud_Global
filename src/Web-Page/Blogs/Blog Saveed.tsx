@@ -33,8 +33,35 @@ const CATEGORY_STYLES: Record<string, { tagColor: string; accent: string; gradie
 
 const DEFAULT_STYLE = { tagColor: '#1A7FD4', accent: '#1A7FD4', gradient: 'from-[#EEF3FF] to-[#D4EEFF]' };
 
+export function decodeHtmlEntities(str: string): string {
+  if (!str) return '';
+  return str
+    .replace(/&#(\d+);/g, (_, dec) => {
+      try { return String.fromCharCode(parseInt(dec, 10)); } catch { return _; }
+    })
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => {
+      try { return String.fromCharCode(parseInt(hex, 16)); } catch { return _; }
+    })
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#039;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&mdash;/g, '—')
+    .replace(/&ndash;/g, '–')
+    .replace(/&rsquo;/g, '’')
+    .replace(/&lsquo;/g, '‘')
+    .replace(/&rdquo;/g, '”')
+    .replace(/&ldquo;/g, '“')
+    .replace(/&hellip;/g, '…');
+}
+
 function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>?/gm, '').trim();
+  if (!html) return '';
+  const text = html.replace(/<[^>]*>?/gm, '').trim();
+  return decodeHtmlEntities(text);
 }
 
 function resolveCategory(wpCategories: any[], title: string): string {

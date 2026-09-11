@@ -8,6 +8,7 @@ import {
 import { CLAY_CARD, CLAY_INPUT } from "./Constants";
 import ContactLocations from "./ContactLocations";
 import { supabase } from "../../lib/supabaseClient";
+import ContactPhone from "@/Component/ContactPhone";
 
 const CustomSelect = ({ label, options, placeholder, value, onChange }: any) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -343,7 +344,7 @@ const ContactInfoForm = ({ activeTab, onTabChange }: any) => {
                     <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-white shadow-sm border border-[#34C98A]/10 flex items-center justify-center text-[#34C98A] group-hover:scale-105 transition-transform shrink-0">
                        <MessageCircle size={15} />
                     </div>
-                    <span className="font-nunito font-black text-[#0D1B2A] text-xs sm:text-sm">+971 545 132 807</span>
+                    <span className="font-nunito font-black text-[#0D1B2A] text-xs sm:text-sm"><ContactPhone /></span>
                  </div>
               </div>
 

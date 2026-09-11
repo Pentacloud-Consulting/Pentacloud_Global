@@ -4,6 +4,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { Check, Phone, ArrowRight } from "lucide-react";
 import { CLAY_CARD } from "./Constants";
+import ContactPhone from "@/Component/ContactPhone";
 
 const consultingPackages = [
   {
@@ -178,7 +179,7 @@ const ConsultingPackages = () => {
               Book Free Consultation <ArrowRight className="w-5 h-5" />
             </button>
             <button className="bg-white/10 hover:bg-white/20 text-white px-8 py-4 sm:px-10 sm:py-5 rounded-xl sm:rounded-2xl font-nunito font-black text-sm sm:text-lg backdrop-blur-sm transition-all w-full sm:w-auto flex items-center justify-center gap-2">
-              <Phone className="w-5 h-5" /> Call +971 545 132 807
+              <Phone className="w-5 h-5" /> Call <ContactPhone />
             </button>
           </div>
           
