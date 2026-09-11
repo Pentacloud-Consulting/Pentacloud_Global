@@ -1,0 +1,4 @@
+export const CLAY_CARD = "bg-[#F8FBFF] rounded-[40px] border border-white shadow-[15px_15px_30px_rgba(163,185,210,0.2),-15px_-15px_30px_rgba(255,255,255,0.8)] hover:shadow-[20px_20px_40px_rgba(163,185,210,0.3),-20px_-20px_40px_rgba(255,255,255,1)] transition-all duration-500";
+export const NEUMORPHIC_BUTTON = "bg-[#F8FBFF] rounded-2xl shadow-[6px_6px_12px_rgba(163,185,210,0.2),-6px_-6px_12px_rgba(255,255,255,0.8)] hover:scale-105 active:scale-95 transition-all duration-300";
+export const CLAY_ICON = "bg-[#F8FBFF] rounded-2xl shadow-[8px_8px_16px_rgba(163,185,210,0.2),-8px_-8px_16px_rgba(255,255,255,0.8)]";
+export const CLAY_INPUT = "w-full bg-[#F8FBFF] border border-[#1A7FD4]/10 rounded-2xl px-6 py-4 outline-none focus:ring-4 focus:ring-[#1A7FD4]/10 transition-all shadow-[6px_6px_12px_rgba(163,185,210,0.15)] hover:shadow-[8px_8px_16px_rgba(163,185,210,0.2)]";
