@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BookOpen, Search, Filter, ChevronDown, Globe } from 'lucide-react';
 
@@ -62,6 +62,16 @@ const DEFAULT_CONTENT = DOMAIN_CONTENT['pentacloud.in'];
 
 export function BlogPageTop({ searchQuery, setSearchQuery, activeCategory, setActiveCategory, setVisibleCount, activeDomain, onSwitchDomain }: any) {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isLocal, setIsLocal] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const host = window.location.hostname;
+      if (host === 'localhost' || host === '127.0.0.1' || host.includes('localhost') || process.env.NODE_ENV === 'development') {
+        setIsLocal(true);
+      }
+    }
+  }, []);
 
   const content = DOMAIN_CONTENT[activeDomain] || DEFAULT_CONTENT;
   const isConsulting = activeDomain === 'pentacloudconsulting.com';
@@ -142,53 +152,55 @@ export function BlogPageTop({ searchQuery, setSearchQuery, activeCategory, setAc
           </motion.p>
         </AnimatePresence>
 
-        {/* ── Domain Toggle Buttons ── */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.25 }}
-          className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mb-4 sm:mb-10"
-        >
-          <span className="font-nunito font-bold text-[11px] sm:text-sm text-[#4A6080] flex items-center gap-1">
-            <Globe size={12} /> Blogs From:
-          </span>
-
-          {/* pentacloud.in button */}
-          <button
-            type="button"
-            onClick={() => onSwitchDomain && onSwitchDomain('pentacloud.in')}
-            className={`cursor-pointer px-3 py-1.5 sm:px-4 sm:py-2 rounded-full font-nunito font-bold text-[11px] sm:text-sm transition-all duration-300 flex items-center gap-1 ${
-              activeDomain === 'pentacloud.in'
-                ? 'text-white shadow-md scale-105'
-                : 'bg-white border hover:shadow-sm'
-            }`}
-            style={
-              activeDomain === 'pentacloud.in'
-                ? { background: DOMAIN_CONTENT['pentacloud.in'].accent }
-                : { color: DOMAIN_CONTENT['pentacloud.in'].accent, borderColor: `${DOMAIN_CONTENT['pentacloud.in'].accent}40`, background: DOMAIN_CONTENT['pentacloud.in'].accentBg }
-            }
+        {/* ── Domain Toggle Buttons (Visible ONLY in local development) ── */}
+        {isLocal && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.25 }}
+            className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mb-4 sm:mb-10"
           >
-            🇮🇳 pentacloud.in
-          </button>
+            <span className="font-nunito font-bold text-[11px] sm:text-sm text-[#4A6080] flex items-center gap-1">
+              <Globe size={12} /> Blogs From:
+            </span>
 
-          {/* pentacloudconsulting.com button */}
-          <button
-            type="button"
-            onClick={() => onSwitchDomain && onSwitchDomain('pentacloudconsulting.com')}
-            className={`cursor-pointer px-3 py-1.5 sm:px-4 sm:py-2 rounded-full font-nunito font-bold text-[11px] sm:text-sm transition-all duration-300 flex items-center gap-1 ${
-              activeDomain === 'pentacloudconsulting.com'
-                ? 'text-white shadow-md scale-105'
-                : 'bg-white border hover:shadow-sm'
-            }`}
-            style={
-              activeDomain === 'pentacloudconsulting.com'
-                ? { background: DOMAIN_CONTENT['pentacloudconsulting.com'].accent }
-                : { color: DOMAIN_CONTENT['pentacloudconsulting.com'].accent, borderColor: `${DOMAIN_CONTENT['pentacloudconsulting.com'].accent}40`, background: DOMAIN_CONTENT['pentacloudconsulting.com'].accentBg }
-            }
-          >
-            🌐 pentacloudconsulting.com
-          </button>
-        </motion.div>
+            {/* pentacloud.in button */}
+            <button
+              type="button"
+              onClick={() => onSwitchDomain && onSwitchDomain('pentacloud.in')}
+              className={`cursor-pointer px-3 py-1.5 sm:px-4 sm:py-2 rounded-full font-nunito font-bold text-[11px] sm:text-sm transition-all duration-300 flex items-center gap-1 ${
+                activeDomain === 'pentacloud.in'
+                  ? 'text-white shadow-md scale-105'
+                  : 'bg-white border hover:shadow-sm'
+              }`}
+              style={
+                activeDomain === 'pentacloud.in'
+                  ? { background: DOMAIN_CONTENT['pentacloud.in'].accent }
+                  : { color: DOMAIN_CONTENT['pentacloud.in'].accent, borderColor: `${DOMAIN_CONTENT['pentacloud.in'].accent}40`, background: DOMAIN_CONTENT['pentacloud.in'].accentBg }
+              }
+            >
+              🇮🇳 pentacloud.in
+            </button>
+
+            {/* pentacloudconsulting.com button */}
+            <button
+              type="button"
+              onClick={() => onSwitchDomain && onSwitchDomain('pentacloudconsulting.com')}
+              className={`cursor-pointer px-3 py-1.5 sm:px-4 sm:py-2 rounded-full font-nunito font-bold text-[11px] sm:text-sm transition-all duration-300 flex items-center gap-1 ${
+                activeDomain === 'pentacloudconsulting.com'
+                  ? 'text-white shadow-md scale-105'
+                  : 'bg-white border hover:shadow-sm'
+              }`}
+              style={
+                activeDomain === 'pentacloudconsulting.com'
+                  ? { background: DOMAIN_CONTENT['pentacloudconsulting.com'].accent }
+                  : { color: DOMAIN_CONTENT['pentacloudconsulting.com'].accent, borderColor: `${DOMAIN_CONTENT['pentacloudconsulting.com'].accent}40`, background: DOMAIN_CONTENT['pentacloudconsulting.com'].accentBg }
+              }
+            >
+              🌐 pentacloudconsulting.com
+            </button>
+          </motion.div>
+        )}
 
         {/* ── Active domain indicator bar ── */}
         <AnimatePresence mode="wait">
