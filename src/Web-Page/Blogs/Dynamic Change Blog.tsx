@@ -25,7 +25,7 @@ export function getDomainConfig(host?: string): DomainConfig {
     return {
       domainName: 'pentacloud.in',
       siteTitle: 'Pentacloud Consulting India',
-      wpApiUrl: 'https://pentacloud.in',
+      wpApiUrl: 'https://pentacloudconsulting.com',
       canonicalBase: 'https://pentacloud.in',
       contactEmail: 'contactus@pentacloudconsulting.com',
       contactPhone: '+91 8147897286',
@@ -74,9 +74,9 @@ export async function fetchBlogsForDomain(customHost?: string) {
 
       if (res.ok) return await res.json();
 
-      // Fallback to pentacloud.in
-      if (domain !== 'pentacloud.in') {
-        const fbRes = await fetch('https://pentacloud.in/wp-json/wp/v2/posts?_embed&per_page=100', {
+      // Fallback to pentacloudconsulting.com
+      if (domain !== 'pentacloudconsulting.com') {
+        const fbRes = await fetch('https://pentacloudconsulting.com/wp-json/wp/v2/posts?_embed&per_page=100', {
           headers: { 'Accept': 'application/json', 'User-Agent': 'Pentacloud-NextJS/1.0' },
           next: { revalidate: 60 },
         });

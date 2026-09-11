@@ -12,12 +12,11 @@ import { NextRequest, NextResponse } from 'next/server';
  */
 
 const ALLOWED_DOMAINS: Record<string, string> = {
-  'pentacloud.in': 'https://cms.pentacloud.in',
-  'cms.pentacloud.in': 'https://cms.pentacloud.in',
+  'pentacloud.in': 'https://pentacloudconsulting.com',
   'pentacloudconsulting.com': 'https://pentacloudconsulting.com',
 };
 
-const FALLBACK_BASE = 'https://cms.pentacloud.in';
+const FALLBACK_BASE = 'https://pentacloudconsulting.com';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
