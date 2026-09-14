@@ -25,7 +25,7 @@ export function getDomainConfig(host?: string): DomainConfig {
     return {
       domainName: 'pentacloud.in',
       siteTitle: 'Pentacloud Consulting India',
-      wpApiUrl: 'https://cms.pentacloudconsulting.com',
+      wpApiUrl: 'https://pentacloudconsulting.com',
       canonicalBase: 'https://pentacloud.in',
       contactEmail: 'contactus@pentacloudconsulting.com',
       contactPhone: '+91 8147897286',
@@ -35,7 +35,7 @@ export function getDomainConfig(host?: string): DomainConfig {
   return {
     domainName: 'pentacloudconsulting.com',
     siteTitle: 'Pentacloud Consulting',
-    wpApiUrl: 'https://cms.pentacloudconsulting.com',
+    wpApiUrl: 'https://pentacloudconsulting.com',
     canonicalBase: 'https://pentacloudconsulting.com',
     contactEmail: 'contactus@pentacloudconsulting.com',
     contactPhone: '+971 545 132 807',
@@ -74,9 +74,9 @@ export async function fetchBlogsForDomain(customHost?: string) {
 
       if (res.ok) return await res.json();
 
-      // Fallback to cms.pentacloudconsulting.com
+      // Fallback to pentacloudconsulting.com
       if (domain !== 'pentacloudconsulting.com') {
-        const fbRes = await fetch('https://cms.pentacloudconsulting.com/wp-json/wp/v2/posts?_embed&per_page=100', {
+        const fbRes = await fetch('https://pentacloudconsulting.com/wp-json/wp/v2/posts?_embed&per_page=100', {
           headers: { 'Accept': 'application/json', 'User-Agent': 'Pentacloud-NextJS/1.0' },
           next: { revalidate: 60 },
         });
@@ -100,9 +100,9 @@ export async function fetchBlogsForDomain(customHost?: string) {
   } catch (err) {
     console.error(`[fetchBlogsForDomain] Error fetching blogs for ${domain}:`, err);
 
-    // Last-resort fallback — always use headless WP subdomain
+    // Last-resort fallback — always use active WP domain
     try {
-      const fbRes = await fetch('https://cms.pentacloudconsulting.com/wp-json/wp/v2/posts?_embed&per_page=100', {
+      const fbRes = await fetch('https://pentacloudconsulting.com/wp-json/wp/v2/posts?_embed&per_page=100', {
         headers: { 'Accept': 'application/json' },
         next: { revalidate: 60 },
       });

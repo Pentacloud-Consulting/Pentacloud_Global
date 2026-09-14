@@ -5,7 +5,7 @@ export async function GET() {
 
   let posts: any[] = [];
   try {
-    const res = await fetch('https://cms.pentacloudconsulting.com/wp-json/wp/v2/posts?_embed&per_page=100', {
+    const res = await fetch('https://pentacloudconsulting.com/wp-json/wp/v2/posts?_embed&per_page=100', {
       next: { revalidate: 3600 }
     });
     if (res.ok) {
