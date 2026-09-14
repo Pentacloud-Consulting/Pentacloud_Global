@@ -11,35 +11,32 @@ const locations = [
   {
     label: "India Office",
     address: "Jagan Arcade, 4th Floor, 1st Main Road, Anandnagar, RT Nagar, Bengaluru, 560032, Karnataka, India",
-    phone: "+971 545 132 807",
+    phone: "+91 8147897286",
     iconColor: "text-[#1A7FD4]",
-    // Jagan Arcade, Anandnagar, RT Nagar, Bengaluru
-    lat: 13.0155,
-    lon: 77.5888,
-    zoom: 16,
-    mapQuery: "Jagan Arcade, Anandnagar, Bengaluru, Karnataka"
+    lat: 13.02384,
+    lon: 77.58948,
+    zoom: 17,
+    mapQuery: "13.02384,77.58948"
   },
   {
     label: "UAE Presence",
     address: "Office No. 84, Owner Adel Mohammed Ali, Al Quoz 1, Al Quoz 1, Dubai, 0000, Dubai",
     phone: "+971 545 132 807",
     iconColor: "text-[#34C98A]",
-    // Al Quoz 1, Dubai
     lat: 25.1480,
     lon: 55.2250,
-    zoom: 15,
-    mapQuery: "Al Quoz 1, Dubai, UAE"
+    zoom: 16,
+    mapQuery: "25.1480,55.2250"
   },
   {
     label: "Qatar Presence",
-    address: "Strategic presence across Doha & Qatar",
-    phone: "+971 545 132 807",
+    address: "Building 16, Zone 69, Street 169, Lusail Boulevard (next to Downtown Lusail Tram Station), Doha, Qatar",
+    phone: "+974 7200 7930",
     iconColor: "text-[#F59E0B]",
-    // Doha city centre
-    lat: 25.2854,
-    lon: 51.5310,
-    zoom: 13,
-    mapQuery: "Doha, Qatar"
+    lat: 25.41655,
+    lon: 51.50109,
+    zoom: 17,
+    mapQuery: "25.41655,51.50109"
   }
 ];
 
@@ -62,8 +59,7 @@ const ContactLocations = () => {
   const handleShare = () => {
     if (activeLocation !== null) {
       const loc = locations[activeLocation];
-      const phoneString = getDomainConfig().contactPhone;
-      const textToCopy = `${loc.label}\n${loc.address}\nPhone: ${phoneString}\nMap: https://www.openstreetmap.org/?mlat=${loc.lat}&mlon=${loc.lon}#map=${loc.zoom}/${loc.lat}/${loc.lon}`;
+      const textToCopy = `${loc.label}\n${loc.address}\nPhone: ${loc.phone}\nGoogle Maps: https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc.address)}`;
       navigator.clipboard.writeText(textToCopy);
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
@@ -71,9 +67,9 @@ const ContactLocations = () => {
   };
 
   return (
-    <section className="py-4 sm:py-8 px-0 bg-background">
+    <section className="py-0 px-0 bg-background">
       <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 mb-4">
           {locations.map((loc, idx) => (
             <motion.div
               key={loc.label}
@@ -104,9 +100,9 @@ const ContactLocations = () => {
                 
                 <div className="flex gap-2.5 items-center">
                   <Phone size={13} className="text-[#4A6080] shrink-0" />
-                  <span className="font-nunito font-bold text-[#0D1B2A] text-[11px] sm:text-[13px]">
-                    <ContactPhone />
-                  </span>
+                  <a href={`tel:${loc.phone.replace(/\s+/g, '')}`} className="font-nunito font-bold text-[#0D1B2A] text-[11px] sm:text-[13px] hover:text-[#1A7FD4] transition-colors">
+                    {loc.phone}
+                  </a>
                 </div>
               </div>
 
@@ -170,7 +166,7 @@ const ContactLocations = () => {
                     height="100%"
                     style={{ border: 0 }}
                     allowFullScreen
-                    src={`https://www.openstreetmap.org/export/embed.html?bbox=${locations[activeLocation].lon - 0.01}%2C${locations[activeLocation].lat - 0.008}%2C${locations[activeLocation].lon + 0.01}%2C${locations[activeLocation].lat + 0.008}&layer=mapnik&marker=${locations[activeLocation].lat}%2C${locations[activeLocation].lon}`}
+                    src={`https://maps.google.com/maps?q=${encodeURIComponent(locations[activeLocation].mapQuery)}&t=&z=${locations[activeLocation].zoom || 16}&ie=UTF8&iwloc=&output=embed`}
                     onLoad={() => setIsLoadingMap(false)}
                   ></iframe>
                 </div>

@@ -22,7 +22,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Dynamic WordPress blog routes
   let blogRoutes: any[] = [];
   try {
-    const res = await fetch('https://pentacloud.in/wp-json/wp/v2/posts?per_page=100', {
+    const res = await fetch('https://cms.pentacloudconsulting.com/wp-json/wp/v2/posts?per_page=100', {
       next: { revalidate: 3600 }
     });
     if (res.ok) {

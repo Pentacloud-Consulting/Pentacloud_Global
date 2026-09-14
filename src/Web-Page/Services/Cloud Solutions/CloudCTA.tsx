@@ -49,7 +49,7 @@ const CloudCTA = () => {
     }
   ];
 
-  const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   return (
     <section className="bg-background">

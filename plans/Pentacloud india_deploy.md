@@ -9,9 +9,11 @@ This document contains exact, step-by-step instructions to safely deploy new fea
 | Domain | Port | Server Directory | PM2 Process Name | Status |
 | :--- | :--- | :--- | :--- | :--- |
 | **`pentacloud.in`** | `4001` | `/var/www/pentacloud-india` | `pentacloud-in` | 🟢 Active (India Site) |
-| **`pentacloud.me`** | `4000` | `/var/www/pentacloud` | `pentacloud` | 🟢 Active (Separate Site) |
+| **`pentacloud.me`** | `4000` | `/var/www/pentacloud` | `pentacloud` | 🟢 Active (Dubai/Global Site) |
+| **`pentacloudconsulting.com`** | `4002` | `/var/www/pentacloud-com` | `pentacloud-com` | 🟡 Ready for Setup |
+| **`cms.pentacloudconsulting.com`** | Hostinger | Shared Hosting (`82.180.142.220`) | WordPress Engine | 🟢 Headless WP for Blogs |
 
-> 🔒 **Isolation Guarantee:** `pentacloud.in` and `pentacloud.me` are hosted in separate directories with separate PM2 processes. Deploying to `pentacloud-india` will **NEVER** affect `pentacloud.me`.
+> 🔒 **Isolation Guarantee:** All projects (`pentacloud.in`, `pentacloud.me`, and `pentacloudconsulting.com`) run in separate isolated server directories with unique PM2 ports. Updating one site will **NEVER** break another. Headless WordPress for blogs runs safely on `cms.pentacloudconsulting.com`.
 
 ---
 

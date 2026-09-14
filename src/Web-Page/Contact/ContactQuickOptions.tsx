@@ -21,7 +21,7 @@ const options = [
     cta: "Send Email",
     href: "mailto:contactus@pentacloudconsulting.com",
     color: "#1A7FD4",
-    response: "Within 24 Hours"
+    response: "Within 8 Hours"
   },
   {
     icon: Phone,
@@ -51,7 +51,7 @@ const options = [
 
 const ContactQuickOptions = () => {
   return (
-    <section className="py-12 sm:py-20 relative overflow-hidden px-4 sm:px-6">
+    <section className="pt-4 pb-12 sm:pt-6 sm:pb-16 relative overflow-hidden px-4 sm:px-6">
       <div className="max-w-7xl mx-auto relative z-10">
         <div className="text-center mb-10 sm:mb-16 flex flex-col items-center">
           <motion.div

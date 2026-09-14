@@ -101,7 +101,7 @@ const FormBlock = ({ handleSubmit, formStatus, agreed, setAgreed, formData, setF
         <>
           <div className="mb-5 sm:mb-8">
             <h3 className="text-xl sm:text-3xl font-nunito font-black text-[#0D1B2A] mb-2 sm:mb-3">Contact for Business</h3>
-            <p className="text-[#4A6080] font-inter text-xs sm:text-sm leading-relaxed">Fill in the form below and one of our consultants will reach out within 24 hours.</p>
+            <p className="text-[#4A6080] font-inter text-xs sm:text-sm leading-relaxed">Fill in the form below and one of our consultants will reach out within 8 hours.</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
@@ -275,7 +275,7 @@ const ContactInfoForm = ({ activeTab, onTabChange }: any) => {
   };
 
   return (
-    <div className="bg-background min-h-screen pt-16 sm:pt-24 pb-4 sm:pb-12 px-4 sm:px-6">
+    <div className="bg-background pt-16 sm:pt-24 pb-0 px-4 sm:px-6">
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-8 lg:gap-10 items-start">
             
