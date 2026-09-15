@@ -15,14 +15,56 @@ const nunito = Nunito({
 });
 
 export const metadata: Metadata = {
-  title: "Pentacloud Consulting | Your Trusted Partner in Innovation & Technology",
-  description: "Empowering businesses with the right technology to innovate, grow, and succeed.",
+  metadataBase: new URL('https://pentacloud.in'),
+  title: {
+    default: "Pentacloud Consulting | Salesforce, Zoho & Cloud IT Partner",
+    template: "%s | Pentacloud Consulting"
+  },
+  description: "Pentacloud Consulting is a certified Salesforce, Zoho, Cloud Solutions, App Development, and Digital Transformation partner operating in India, UAE, and Qatar.",
+  keywords: [
+    "Salesforce Consulting India",
+    "Salesforce Partner Dubai",
+    "Zoho Implementation Partner",
+    "Cloud Consulting Bengaluru",
+    "Pentacloud Consulting",
+    "Digital Marketing Services RT Nagar",
+    "IT Consulting Qatar"
+  ],
+  authors: [{ name: "Pentacloud Consulting" }],
+  creator: "Pentacloud Consulting",
+  publisher: "Pentacloud Consulting",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
   openGraph: {
-    title: "Pentacloud Consulting | Your Trusted Partner in Innovation & Technology",
-    description: "Empowering businesses with the right technology to innovate, grow, and succeed.",
+    title: "Pentacloud Consulting | Salesforce, Zoho & Cloud IT Partner",
+    description: "Empowering businesses with Salesforce, Zoho, Cloud Services, and Digital Transformation across India, UAE, and Qatar.",
     url: "https://pentacloud.in/",
     siteName: "Pentacloud Consulting",
+    images: [
+      {
+        url: "/Logo/Penta Favicon.png",
+        width: 1200,
+        height: 630,
+        alt: "Pentacloud Consulting Logo",
+      },
+    ],
+    locale: "en_US",
     type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Pentacloud Consulting | Salesforce, Zoho & Cloud IT Partner",
+    description: "Empowering businesses with Salesforce, Zoho, Cloud Services, and Digital Transformation.",
+    images: ["/Logo/Penta Favicon.png"],
   },
   icons: {
     icon: "/Logo/Penta Favicon.png",
@@ -33,6 +75,7 @@ export const metadata: Metadata = {
 
 import WhatsApp from "@/Details/WhatsApp/WhatsApp";
 import SplashWrapper from "@/Animation/SplashWrapper";
+import JsonLdSchema from "@/Component/JsonLdSchema";
 
 export default function RootLayout({
   children,
@@ -45,6 +88,7 @@ export default function RootLayout({
       className={`${inter.variable} ${nunito.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col relative">
+        <JsonLdSchema />
         <SplashWrapper>
           {children}
           <WhatsApp />

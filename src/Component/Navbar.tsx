@@ -133,6 +133,8 @@ const Navbar = () => {
 
           {/* Mobile Menu Toggle */}
           <button
+            aria-label="Toggle navigation menu"
+            aria-expanded={isMobileMenuOpen}
             className="md:hidden p-1.5 text-slate-900 focus:outline-none"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           >
