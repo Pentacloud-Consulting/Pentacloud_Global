@@ -45,7 +45,6 @@ async function fetchDirectIP(path: string): Promise<any[] | null> {
         'User-Agent': 'Pentacloud-NextJS/1.0',
         'Host':       WP_HOST,
       },
-      // @ts-expect-error — Next.js fetch cache hint
       next: { revalidate: 60 },
     });
     if (!res.ok) {
@@ -73,7 +72,6 @@ async function fetchSubdomain(path: string): Promise<any[] | null> {
         'Accept':     'application/json',
         'User-Agent': 'Pentacloud-NextJS/1.0',
       },
-      // @ts-expect-error — Next.js fetch cache hint
       next: { revalidate: 60 },
     });
     if (!res.ok) {
@@ -101,7 +99,6 @@ async function fetchRootDomain(path: string): Promise<any[] | null> {
         'Accept':     'application/json',
         'User-Agent': 'Pentacloud-NextJS/1.0',
       },
-      // @ts-expect-error — Next.js fetch cache hint
       next: { revalidate: 60 },
     });
     if (!res.ok) {

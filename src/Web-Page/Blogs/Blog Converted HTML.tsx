@@ -58,52 +58,98 @@ export function BlogConvertedHTML({ blog }: { blog: any }) {
     if (container) {
       container.addEventListener('click', handleLinkClick as any);
 
-      // Dynamically group post card blocks (if Elementor inserted them as raw HTML)
-      const postLinks = Array.from(container.querySelectorAll('a[href*="salesforce"], a[href*="blog"]'));
-      const cards: HTMLElement[] = [];
+      // Dynamically group post card blocks (if Elementor/WP inserted them as raw HTML elements)
+      const allImgs = Array.from(container.querySelectorAll('img'));
+      const cardPairs: { imgContainer: HTMLElement; titleEl: HTMLElement; learnMoreEl: HTMLElement | null }[] = [];
 
-      postLinks.forEach((a) => {
-        const img = a.querySelector('img') || a.previousElementSibling?.querySelector('img') || a.parentElement?.querySelector('img');
-        if (img) {
-          // Identify card container
-          let cardBox = (a.closest('figure') || a.parentElement) as HTMLElement;
-          if (cardBox) {
-            // Find corresponding title and learn more link below the image
-            let nextEl = cardBox.nextElementSibling as HTMLElement;
-            const titleEl = nextEl && (nextEl.tagName === 'H2' || nextEl.tagName === 'H3' || nextEl.tagName === 'H4' || nextEl.tagName === 'P' || nextEl.querySelector('a')) ? nextEl : null;
-            let learnMoreEl = titleEl ? titleEl.nextElementSibling as HTMLElement : null;
+      allImgs.forEach((img) => {
+        const imgEl = img as HTMLImageElement;
+        // Skip hero cover image or tiny icons/badges
+        if (imgEl.classList.contains('pc-uploaded') || (imgEl.naturalWidth > 0 && imgEl.naturalWidth < 50)) return;
 
-            // Create unified clean card
-            const newCard = document.createElement('div');
-            newCard.className = 'pc-custom-blog-card';
-            
-            // Append image
-            newCard.appendChild(cardBox.cloneNode(true));
-            
-            // Append title
-            if (titleEl) {
-              newCard.appendChild(titleEl.cloneNode(true));
-              titleEl.style.display = 'none';
-            }
-            
-            // Append learn more button
-            if (learnMoreEl) {
-              newCard.appendChild(learnMoreEl.cloneNode(true));
-              learnMoreEl.style.display = 'none';
-            }
-            
-            cardBox.style.display = 'none';
-            cards.push(newCard);
+        // Find top-level container for this image within .blog-rich-content (figure, p, div, a)
+        let imgBox: HTMLElement = imgEl;
+        while (imgBox.parentElement && imgBox.parentElement !== container) {
+          const p = imgBox.parentElement;
+          if (['FIGURE', 'P', 'DIV', 'A'].includes(p.tagName)) {
+            imgBox = p;
+          } else {
+            break;
+          }
+        }
+
+        // Look for next sibling element containing title/heading
+        let nextEl = imgBox.nextElementSibling as HTMLElement | null;
+        if (!nextEl && imgBox.parentElement && imgBox.parentElement !== container) {
+          nextEl = imgBox.parentElement.nextElementSibling as HTMLElement | null;
+        }
+
+        if (nextEl) {
+          const tagName = nextEl.tagName;
+          const hasLink = nextEl.querySelector('a') !== null;
+          const text = nextEl.textContent?.trim() || '';
+
+          const isTitle = (['H1', 'H2', 'H3', 'H4', 'H5', 'P'].includes(tagName) && (hasLink || tagName.startsWith('H'))) && text.length > 5;
+
+          if (isTitle) {
+            let learnMoreEl = nextEl.nextElementSibling as HTMLElement | null;
+            const isLearnMore = learnMoreEl && (
+              learnMoreEl.textContent?.toLowerCase().includes('learn more') ||
+              learnMoreEl.textContent?.toLowerCase().includes('read more') ||
+              (learnMoreEl.querySelector('a') !== null && (learnMoreEl.textContent?.trim().length || 0) < 30)
+            );
+
+            cardPairs.push({
+              imgContainer: imgBox,
+              titleEl: nextEl,
+              learnMoreEl: isLearnMore ? learnMoreEl : null
+            });
           }
         }
       });
 
-      if (cards.length > 0) {
+      if (cardPairs.length > 0) {
+        const cards: HTMLElement[] = [];
+        const firstBox = cardPairs[0].imgContainer;
+        const insertionPoint = firstBox.parentElement === container ? firstBox : (firstBox.parentElement || firstBox);
+
+        cardPairs.forEach(({ imgContainer, titleEl, learnMoreEl }) => {
+          const newCard = document.createElement('div');
+          newCard.className = 'pc-custom-blog-card';
+
+          const imgBox = document.createElement('div');
+          imgBox.className = 'pc-card-img-box';
+          imgBox.appendChild(imgContainer.cloneNode(true));
+          newCard.appendChild(imgBox);
+
+          const titleBox = document.createElement('div');
+          titleBox.className = 'pc-card-title-box';
+          titleBox.appendChild(titleEl.cloneNode(true));
+          newCard.appendChild(titleBox);
+
+          if (learnMoreEl) {
+            const learnBox = document.createElement('div');
+            learnBox.className = 'pc-card-learn-box';
+            learnBox.appendChild(learnMoreEl.cloneNode(true));
+            newCard.appendChild(learnBox);
+            learnMoreEl.style.display = 'none';
+          }
+
+          imgContainer.style.display = 'none';
+          titleEl.style.display = 'none';
+
+          cards.push(newCard);
+        });
+
         const gridWrapper = document.createElement('div');
         gridWrapper.className = 'elementor-grid-3cols-row';
-        // Place the 3-card grid at the bottom of the article content, right above the CTA
-        container.appendChild(gridWrapper);
         cards.forEach((c) => gridWrapper.appendChild(c));
+
+        if (insertionPoint && insertionPoint.parentNode) {
+          insertionPoint.parentNode.insertBefore(gridWrapper, insertionPoint);
+        } else {
+          container.appendChild(gridWrapper);
+        }
       }
     }
 
@@ -430,7 +476,7 @@ export function BlogConvertedHTML({ blog }: { blog: any }) {
             margin-bottom: 0.5rem !important;
         }
 
-        /* Universal WordPress / Elementor Posts Grid (Forced 1 Horizontal Line, Small & Responsive) */
+        /* Universal WordPress / Elementor Posts Grid (All 3 small & clean in 1 line) */
         .blog-rich-content .elementor-grid-3cols-row,
         .blog-rich-content .elementor-posts-container,
         .blog-rich-content .elementor-grid,
@@ -438,17 +484,12 @@ export function BlogConvertedHTML({ blog }: { blog: any }) {
         .blog-rich-content .jeg_posts,
         .blog-rich-content .wp-block-columns,
         .blog-rich-content .elementor-widget-posts .elementor-widget-container {
-            display: flex !important;
-            flex-direction: row !important;
-            flex-wrap: nowrap !important;
-            justify-content: space-between !important;
-            align-items: stretch !important;
-            gap: 0.75rem !important;
-            margin: 2rem 0 !important;
+            display: grid !important;
+            grid-template-columns: repeat(3, 1fr) !important;
+            gap: 1rem !important;
+            margin: 2.5rem 0 !important;
             width: 100% !important;
-            overflow-x: auto !important;
-            padding: 0.25rem 0 !important;
-            -webkit-overflow-scrolling: touch !important;
+            box-sizing: border-box !important;
         }
 
         .blog-rich-content .elementor-grid-3cols-row > *,
@@ -458,20 +499,19 @@ export function BlogConvertedHTML({ blog }: { blog: any }) {
         .blog-rich-content .wp-block-column,
         .blog-rich-content .elementor-posts-container > article,
         .blog-rich-content .elementor-grid > article {
-            flex: 1 1 0% !important;
-            min-width: 140px !important;
             display: flex !important;
             flex-direction: column !important;
             background: #ffffff !important;
             border-radius: 12px !important;
             overflow: hidden !important;
-            box-shadow: 0 3px 12px rgba(0, 115, 230, 0.06), 0 1px 3px rgba(0,0,0,0.03) !important;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0,0,0,0.03) !important;
             border: 1px solid #e2e8f0 !important;
             padding: 0 !important;
             margin: 0 !important;
-            width: auto !important;
-            transition: all 0.3s ease !important;
-            align-self: stretch !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease !important;
+            box-sizing: border-box !important;
         }
 
         .blog-rich-content .pc-custom-blog-card * {
@@ -480,95 +520,118 @@ export function BlogConvertedHTML({ blog }: { blog: any }) {
 
         .blog-rich-content .pc-custom-blog-card:hover,
         .blog-rich-content .elementor-grid-3cols-row > *:hover {
-            transform: translateY(-3px) !important;
-            box-shadow: 0 8px 20px rgba(0, 115, 230, 0.12) !important;
+            transform: translateY(-4px) !important;
+            box-shadow: 0 10px 24px rgba(0, 115, 230, 0.12) !important;
             border-color: #0073e6 !important;
         }
 
         /* Compact Image Box */
+        .blog-rich-content .pc-card-img-box,
         .blog-rich-content .pc-custom-blog-card figure,
         .blog-rich-content .pc-custom-blog-card > div:first-child,
         .blog-rich-content .pc-custom-blog-card > a:first-child,
         .blog-rich-content .elementor-post__thumbnail,
         .blog-rich-content .jeg_thumb,
-        .blog-rich-content article figure,
-        .blog-rich-content article a:first-child {
+        .blog-rich-content article figure {
             width: 100% !important;
-            height: 120px !important;
+            height: 125px !important;
             padding: 0 !important;
             margin: 0 !important;
             overflow: hidden !important;
             background: #f8fafc !important;
+            position: relative !important;
         }
 
+        .blog-rich-content .pc-card-img-box img,
+        .blog-rich-content .pc-card-img-box figure,
+        .blog-rich-content .pc-card-img-box p,
+        .blog-rich-content .pc-card-img-box a,
         .blog-rich-content .pc-custom-blog-card img,
         .blog-rich-content .elementor-post__thumbnail img,
         .blog-rich-content .jeg_thumb img,
+        .blog-rich-content article figure img,
         .blog-rich-content article img {
             width: 100% !important;
-            height: 120px !important;
+            height: 125px !important;
             object-fit: cover !important;
             border-radius: 0 !important;
             margin: 0 !important;
             padding: 0 !important;
+            display: block !important;
             transition: transform 0.4s ease !important;
         }
 
         .blog-rich-content .pc-custom-blog-card:hover img,
         .blog-rich-content .elementor-grid-3cols-row > *:hover img {
-            transform: scale(1.04) !important;
+            transform: scale(1.05) !important;
         }
 
-        /* Fixed-Height Uniform Title Box (Ensures complete title text is 100% visible & line-aligned) */
+        /* Compact Title Box */
+        .blog-rich-content .pc-card-title-box,
         .blog-rich-content .pc-custom-blog-card h2,
         .blog-rich-content .pc-custom-blog-card h3,
         .blog-rich-content .pc-custom-blog-card h4,
         .blog-rich-content .pc-custom-blog-card p,
         .blog-rich-content .elementor-post__title,
-        .blog-rich-content .jeg_post_title,
-        .blog-rich-content article h3,
-        .blog-rich-content article h4 {
+        .blog-rich-content .jeg_post_title {
             font-family: 'Plus Jakarta Sans', sans-serif !important;
-            font-size: 0.76rem !important;
+            font-size: 0.88rem !important;
             font-weight: 700 !important;
-            color: #0073e6 !important;
-            line-height: 1.25 !important;
-            padding: 0.5rem 0.5rem 0.25rem 0.5rem !important;
+            color: #0f172a !important;
+            line-height: 1.35 !important;
+            padding: 0.75rem 0.85rem 0.35rem 0.85rem !important;
             margin: 0 !important;
-            text-decoration: none !important;
-            height: 3.8rem !important;
-            min-height: 3.8rem !important;
-            max-height: 3.8rem !important;
-            display: -webkit-box !important;
-            -webkit-line-clamp: 3 !important;
-            -webkit-box-orient: vertical !important;
-            overflow: hidden !important;
-            transition: color 0.2s ease !important;
         }
 
-        /* Bottom "Learn More" Link - Fixed Straight Line across all cards */
+        .blog-rich-content .pc-card-title-box *,
+        .blog-rich-content .pc-custom-blog-card h2 *,
+        .blog-rich-content .pc-custom-blog-card h3 *,
+        .blog-rich-content .pc-custom-blog-card h4 * {
+            font-family: 'Plus Jakarta Sans', sans-serif !important;
+            font-size: 0.88rem !important;
+            font-weight: 700 !important;
+            color: #0073e6 !important;
+            text-decoration: none !important;
+            line-height: 1.35 !important;
+            margin: 0 !important;
+        }
+
+        .blog-rich-content .pc-card-title-box a:hover,
+        .blog-rich-content .pc-custom-blog-card h2 a:hover,
+        .blog-rich-content .pc-custom-blog-card h3 a:hover {
+            color: #0047b3 !important;
+            text-decoration: underline !important;
+        }
+
+        /* Bottom "Learn More" Link */
+        .blog-rich-content .pc-card-learn-box,
         .blog-rich-content .pc-custom-blog-card a:last-child,
-        .blog-rich-content .elementor-post__read-more,
-        .blog-rich-content article a:last-child {
+        .blog-rich-content .elementor-post__read-more {
             display: flex !important;
             align-items: center !important;
             font-family: 'Plus Jakarta Sans', sans-serif !important;
-            font-size: 0.78rem !important;
+            font-size: 0.82rem !important;
             font-weight: 700 !important;
             color: #0073e6 !important;
-            padding: 0.5rem 0.5rem !important;
+            padding: 0.5rem 0.85rem 0.75rem 0.85rem !important;
             margin-top: auto !important;
-            border-top: 1px solid #f1f5f9 !important;
             text-decoration: none !important;
             background: #ffffff !important;
             transition: all 0.2s ease !important;
         }
 
-        .blog-rich-content .pc-custom-blog-card a:last-child:hover,
-        .blog-rich-content .elementor-post__read-more:hover,
-        .blog-rich-content article a:last-child:hover {
-            background: #f0f7ff !important;
+        .blog-rich-content .pc-card-learn-box a,
+        .blog-rich-content .pc-card-learn-box p {
+            color: #0073e6 !important;
+            text-decoration: none !important;
+            font-weight: 700 !important;
+            font-size: 0.82rem !important;
+            margin: 0 !important;
+        }
+
+        .blog-rich-content .pc-card-learn-box:hover a {
             color: #0047b3 !important;
+            text-decoration: underline !important;
         }
 
         /* Dynamic Typography Blocks */
@@ -867,30 +930,33 @@ export function BlogConvertedHTML({ blog }: { blog: any }) {
                 font-size: 1.25rem !important;
             }
             .blog-rich-content .elementor-grid-3cols-row {
-                gap: 0.5rem !important;
+                gap: 0.75rem !important;
             }
             .blog-rich-content .elementor-grid-3cols-row > *,
             .blog-rich-content .pc-custom-blog-card {
-                min-width: 125px !important;
+                flex: 1 1 100% !important;
+                max-width: 100% !important;
+                min-width: 100% !important;
                 border-radius: 10px !important;
             }
+            .blog-rich-content .pc-card-img-box,
+            .blog-rich-content .pc-card-img-box img,
             .blog-rich-content .pc-custom-blog-card figure,
             .blog-rich-content .pc-custom-blog-card img {
-                height: 100px !important;
+                height: 140px !important;
             }
+            .blog-rich-content .pc-card-title-box,
             .blog-rich-content .pc-custom-blog-card h2,
             .blog-rich-content .pc-custom-blog-card h3,
             .blog-rich-content .pc-custom-blog-card h4,
             .blog-rich-content .pc-custom-blog-card p {
-                font-size: 0.72rem !important;
-                height: 3.4rem !important;
-                min-height: 3.4rem !important;
-                max-height: 3.4rem !important;
-                padding: 0.4rem 0.4rem 0.2rem 0.4rem !important;
+                font-size: 0.85rem !important;
+                padding: 0.6rem 0.75rem 0.3rem 0.75rem !important;
             }
+            .blog-rich-content .pc-card-learn-box,
             .blog-rich-content .pc-custom-blog-card a:last-child {
-                font-size: 0.72rem !important;
-                padding: 0.4rem 0.4rem !important;
+                font-size: 0.8rem !important;
+                padding: 0.4rem 0.75rem 0.6rem 0.75rem !important;
             }
         }
 
