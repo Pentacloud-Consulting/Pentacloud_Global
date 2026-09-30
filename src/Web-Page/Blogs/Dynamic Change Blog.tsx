@@ -54,31 +54,51 @@ function isServer(): boolean {
 
 // ─── Hostinger direct-IP constants ───────────────────────────────────────────
 // WordPress lives on Hostinger Shared Hosting permanently.
-// By hitting the IP directly with a Host header we bypass DNS entirely,
-// which means this works regardless of where @ / www / wp A records point.
 const WP_IP   = '82.180.142.220';
 const WP_HOST = 'pentacloudconsulting.com';
 
 /**
- * Server-side 3-tier WP fetch helper.
- * Tier 1: direct IP + Host header (always works, no DNS dependency)
- * Tier 2: https://wp.pentacloudconsulting.com subdomain
- * Tier 3: https://pentacloudconsulting.com root domain
+ * Server-side WP fetch — hits Hostinger HTTPS directly on IP.
+ * rejectUnauthorized:false because Hostinger's SSL cert is for the domain, not IP.
+ * This bypasses DNS completely AND avoids the 301 redirect loop
+ * (Hostinger redirects HTTP→HTTPS to pentacloudconsulting.com, which now points to VPS).
  */
 async function serverFetchWP(path: string): Promise<any[] | null> {
-  // Tier 1 — Direct IP (HTTP is fine server-to-server, no CORS)
+  // Tier 1 — HTTPS direct to Hostinger IP (bypasses redirect loop)
   try {
-    const res = await fetch(`http://${WP_IP}${path}`, {
-      headers: { 'Accept': 'application/json', 'User-Agent': 'Pentacloud-NextJS/1.0', 'Host': WP_HOST },
-      next: { revalidate: 60 },
+    const https = await import('https');
+    const result = await new Promise<any[] | null>((resolve) => {
+      const req = https.default.request(
+        {
+          hostname: WP_IP,
+          port: 443,
+          path,
+          method: 'GET',
+          headers: { 'Host': WP_HOST, 'Accept': 'application/json', 'User-Agent': 'Pentacloud-NextJS/1.0' },
+          rejectUnauthorized: false,
+          timeout: 10000,
+        },
+        (res) => {
+          if (!res.statusCode || res.statusCode < 200 || res.statusCode >= 300) {
+            res.resume();
+            return resolve(null);
+          }
+          let data = '';
+          res.on('data', (c: Buffer) => { data += c; });
+          res.on('end', () => {
+            try { const p = JSON.parse(data); resolve(Array.isArray(p) ? p : null); }
+            catch { resolve(null); }
+          });
+        }
+      );
+      req.on('error', () => resolve(null));
+      req.on('timeout', () => { req.destroy(); resolve(null); });
+      req.end();
     });
-    if (res.ok) {
-      const data = await res.json();
-      if (Array.isArray(data) && data.length >= 0) return data;
-    }
+    if (result !== null) return result;
   } catch { /* fall through */ }
 
-  // Tier 2 — wp subdomain (works after Hostinger subdomain is configured)
+  // Tier 2 — wp subdomain (if Cloudflare DNS has wp → Hostinger IP)
   try {
     const res = await fetch(`https://wp.pentacloudconsulting.com${path}`, {
       headers: { 'Accept': 'application/json', 'User-Agent': 'Pentacloud-NextJS/1.0' },
@@ -86,19 +106,7 @@ async function serverFetchWP(path: string): Promise<any[] | null> {
     });
     if (res.ok) {
       const data = await res.json();
-      if (Array.isArray(data) && data.length >= 0) return data;
-    }
-  } catch { /* fall through */ }
-
-  // Tier 3 — root domain (last resort)
-  try {
-    const res = await fetch(`https://pentacloudconsulting.com${path}`, {
-      headers: { 'Accept': 'application/json', 'User-Agent': 'Pentacloud-NextJS/1.0' },
-      next: { revalidate: 60 },
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (Array.isArray(data) && data.length >= 0) return data;
+      if (Array.isArray(data)) return data;
     }
   } catch { /* fall through */ }
 

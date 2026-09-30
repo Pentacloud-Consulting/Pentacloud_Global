@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import https from 'https';
+import http from 'http';
 
 /**
  * Server-side WordPress Blog Proxy
  *
  * Fetch strategy (3 tiers — first success wins):
- *   1. Direct IP (http://82.180.142.220) + Host header  ← always works, bypasses DNS
- *   2. https://wp.pentacloudconsulting.com              ← works after subdomain is configured in Hostinger
- *   3. https://pentacloudconsulting.com                 ← last resort
+ *   1. HTTPS to Hostinger IP (rejectUnauthorized:false) — bypasses DNS + redirect loop
+ *   2. HTTP to Hostinger IP with follow-redirect to HTTPS on same IP
+ *   3. https://wp.pentacloudconsulting.com (if DNS is configured)
  *
  * Usage:
  *   GET /api/wp-blogs?domain=pentacloud.in              → all posts (up to 100)
@@ -31,84 +33,138 @@ function wpPath(slug?: string | null): string {
 }
 
 /**
- * Tier 1 — Direct IP fetch with Host header.
- * Bypasses DNS completely; works even if wp subdomain is not yet configured on Hostinger.
- * Uses plain HTTP because HTTPS to an IP without a matching cert fails.
+ * Tier 1 — HTTPS directly to Hostinger IP.
+ * rejectUnauthorized: false because SSL cert is for the domain, not IP.
+ * This bypasses DNS entirely AND avoids the 301 redirect loop.
  */
-async function fetchDirectIP(path: string): Promise<any[] | null> {
-  try {
-    const url = `http://${WP_IP}${path}`;
-    console.log(`[wp-proxy] Tier-1 direct IP: ${url}`);
-    const res = await fetch(url, {
+function fetchHTTPS(path: string): Promise<any[] | null> {
+  return new Promise((resolve) => {
+    const options: https.RequestOptions = {
+      hostname: WP_IP,
+      port: 443,
+      path: path,
+      method: 'GET',
       headers: {
-        'Accept':     'application/json',
-        'User-Agent': 'Pentacloud-NextJS/1.0',
-        'Host':       WP_HOST,
+        'Host':        WP_HOST,
+        'Accept':      'application/json',
+        'User-Agent':  'Pentacloud-NextJS/1.0',
       },
-      next: { revalidate: 60 },
+      rejectUnauthorized: false, // Hostinger shared hosting SSL cert doesn't cover the IP
+      timeout: 10000,
+    };
+
+    console.log(`[wp-proxy] Tier-1 HTTPS to IP: https://${WP_IP}${path}`);
+
+    const req = https.request(options, (res) => {
+      if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400) {
+        console.warn(`[wp-proxy] Tier-1 redirect ${res.statusCode} — trying HTTP fallback`);
+        resolve(null);
+        return;
+      }
+      let data = '';
+      res.on('data', (chunk) => { data += chunk; });
+      res.on('end', () => {
+        try {
+          const parsed = JSON.parse(data);
+          const arr = Array.isArray(parsed) ? parsed : null;
+          console.log(`[wp-proxy] Tier-1 success — ${arr?.length ?? 0} posts`);
+          resolve(arr);
+        } catch {
+          console.warn('[wp-proxy] Tier-1 JSON parse failed');
+          resolve(null);
+        }
+      });
     });
-    if (!res.ok) {
-      console.warn(`[wp-proxy] Tier-1 IP returned ${res.status}`);
-      return null;
-    }
-    const data = await res.json();
-    return Array.isArray(data) ? data : null;
-  } catch (err: any) {
-    console.warn(`[wp-proxy] Tier-1 IP failed: ${err?.message}`);
-    return null;
-  }
+
+    req.on('error', (err) => {
+      console.warn(`[wp-proxy] Tier-1 HTTPS error: ${err.message}`);
+      resolve(null);
+    });
+    req.on('timeout', () => {
+      console.warn('[wp-proxy] Tier-1 HTTPS timeout');
+      req.destroy();
+      resolve(null);
+    });
+    req.end();
+  });
 }
 
 /**
- * Tier 2 — HTTPS via wp.pentacloudconsulting.com subdomain.
- * Works after the subdomain is properly configured in Hostinger hosting panel.
+ * Tier 2 — HTTP to Hostinger IP, follow any 301 redirect back to HTTPS on same IP.
+ */
+function fetchHTTPWithFollowRedirect(path: string): Promise<any[] | null> {
+  return new Promise((resolve) => {
+    const options: http.RequestOptions = {
+      hostname: WP_IP,
+      port: 80,
+      path: path,
+      method: 'GET',
+      headers: {
+        'Host':        WP_HOST,
+        'Accept':      'application/json',
+        'User-Agent':  'Pentacloud-NextJS/1.0',
+      },
+      timeout: 10000,
+    };
+
+    console.log(`[wp-proxy] Tier-2 HTTP to IP: http://${WP_IP}${path}`);
+
+    const req = http.request(options, (res) => {
+      if (res.statusCode === 301 || res.statusCode === 302) {
+        // Follow redirect back to HTTPS on same IP
+        console.log(`[wp-proxy] Tier-2 following ${res.statusCode} to HTTPS on same IP`);
+        res.resume(); // Drain response
+        fetchHTTPS(path).then(resolve);
+        return;
+      }
+      if (!res.statusCode || res.statusCode < 200 || res.statusCode >= 300) {
+        resolve(null);
+        return;
+      }
+      let data = '';
+      res.on('data', (chunk) => { data += chunk; });
+      res.on('end', () => {
+        try {
+          const parsed = JSON.parse(data);
+          resolve(Array.isArray(parsed) ? parsed : null);
+        } catch {
+          resolve(null);
+        }
+      });
+    });
+
+    req.on('error', (err) => {
+      console.warn(`[wp-proxy] Tier-2 HTTP error: ${err.message}`);
+      resolve(null);
+    });
+    req.on('timeout', () => {
+      req.destroy();
+      resolve(null);
+    });
+    req.end();
+  });
+}
+
+/**
+ * Tier 3 — HTTPS via wp.pentacloudconsulting.com subdomain.
+ * Works when Cloudflare DNS has wp → 82.180.142.220 (grey cloud).
  */
 async function fetchSubdomain(path: string): Promise<any[] | null> {
   try {
     const url = `https://wp.pentacloudconsulting.com${path}`;
-    console.log(`[wp-proxy] Tier-2 subdomain: ${url}`);
+    console.log(`[wp-proxy] Tier-3 subdomain: ${url}`);
     const res = await fetch(url, {
-      headers: {
-        'Accept':     'application/json',
-        'User-Agent': 'Pentacloud-NextJS/1.0',
-      },
+      headers: { 'Accept': 'application/json', 'User-Agent': 'Pentacloud-NextJS/1.0' },
       next: { revalidate: 60 },
     });
     if (!res.ok) {
-      console.warn(`[wp-proxy] Tier-2 subdomain returned ${res.status}`);
+      console.warn(`[wp-proxy] Tier-3 subdomain returned ${res.status}`);
       return null;
     }
     const data = await res.json();
     return Array.isArray(data) ? data : null;
   } catch (err: any) {
-    console.warn(`[wp-proxy] Tier-2 subdomain failed: ${err?.message}`);
-    return null;
-  }
-}
-
-/**
- * Tier 3 — HTTPS via root pentacloudconsulting.com.
- * Works when the @ A record still points to Hostinger (before VPS migration).
- */
-async function fetchRootDomain(path: string): Promise<any[] | null> {
-  try {
-    const url = `https://pentacloudconsulting.com${path}`;
-    console.log(`[wp-proxy] Tier-3 root domain: ${url}`);
-    const res = await fetch(url, {
-      headers: {
-        'Accept':     'application/json',
-        'User-Agent': 'Pentacloud-NextJS/1.0',
-      },
-      next: { revalidate: 60 },
-    });
-    if (!res.ok) {
-      console.warn(`[wp-proxy] Tier-3 root returned ${res.status}`);
-      return null;
-    }
-    const data = await res.json();
-    return Array.isArray(data) ? data : null;
-  } catch (err: any) {
-    console.warn(`[wp-proxy] Tier-3 root failed: ${err?.message}`);
+    console.warn(`[wp-proxy] Tier-3 subdomain failed: ${err?.message}`);
     return null;
   }
 }
@@ -122,9 +178,9 @@ export async function GET(request: NextRequest) {
 
   // ── Run all 3 tiers in order; stop at first success ─────────────
   const data =
-    (await fetchDirectIP(path)) ??
-    (await fetchSubdomain(path)) ??
-    (await fetchRootDomain(path));
+    (await fetchHTTPS(path)) ??
+    (await fetchHTTPWithFollowRedirect(path)) ??
+    (await fetchSubdomain(path));
 
   if (data) {
     return NextResponse.json(
@@ -134,7 +190,7 @@ export async function GET(request: NextRequest) {
   }
 
   // All tiers failed
-  console.error(`[wp-proxy] All 3 fetch tiers failed for domain: ${domain}, path: ${path}`);
+  console.error(`[wp-proxy] All fetch tiers failed for domain: ${domain}, path: ${path}`);
   return NextResponse.json(
     { error: 'WordPress API unreachable on all fallback tiers', data: [], source: domain },
     { status: 500 }
