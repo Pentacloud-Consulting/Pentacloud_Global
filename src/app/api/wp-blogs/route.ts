@@ -2,8 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 
 /**
  * Server-side WordPress Blog Proxy
- * Fetches posts from either pentacloud.in or pentacloudconsulting.com
- * bypassing CORS restrictions that block direct browser requests.
+ *
+ * Fetch strategy (3 tiers — first success wins):
+ *   1. Direct IP (http://82.180.142.220) + Host header  ← always works, bypasses DNS
+ *   2. https://wp.pentacloudconsulting.com              ← works after subdomain is configured in Hostinger
+ *   3. https://pentacloudconsulting.com                 ← last resort
  *
  * Usage:
  *   GET /api/wp-blogs?domain=pentacloud.in              → all posts (up to 100)
@@ -11,108 +14,132 @@ import { NextRequest, NextResponse } from 'next/server';
  *   GET /api/wp-blogs?domain=pentacloud.in&slug=my-post → single post by slug
  */
 
-const ALLOWED_DOMAINS: Record<string, string> = {
-  'pentacloud.in': 'https://pentacloudconsulting.com',
-  'pentacloudconsulting.com': 'https://pentacloudconsulting.com',
+// Hostinger shared hosting IP — WordPress lives here permanently
+const WP_IP   = process.env.WP_HOSTINGER_IP   || '82.180.142.220';
+const WP_HOST = process.env.WP_HOSTINGER_HOST  || 'pentacloudconsulting.com';
+
+const CACHE_HEADERS = {
+  'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
+  'Access-Control-Allow-Origin': '*',
 };
 
-const FALLBACK_BASE = 'https://pentacloudconsulting.com';
+/** Build the WP REST API path for posts (all or single slug) */
+function wpPath(slug?: string | null): string {
+  return slug
+    ? `/wp-json/wp/v2/posts?slug=${encodeURIComponent(slug)}&_embed`
+    : `/wp-json/wp/v2/posts?_embed&per_page=100`;
+}
+
+/**
+ * Tier 1 — Direct IP fetch with Host header.
+ * Bypasses DNS completely; works even if wp subdomain is not yet configured on Hostinger.
+ * Uses plain HTTP because HTTPS to an IP without a matching cert fails.
+ */
+async function fetchDirectIP(path: string): Promise<any[] | null> {
+  try {
+    const url = `http://${WP_IP}${path}`;
+    console.log(`[wp-proxy] Tier-1 direct IP: ${url}`);
+    const res = await fetch(url, {
+      headers: {
+        'Accept':     'application/json',
+        'User-Agent': 'Pentacloud-NextJS/1.0',
+        'Host':       WP_HOST,
+      },
+      // @ts-expect-error — Next.js fetch cache hint
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) {
+      console.warn(`[wp-proxy] Tier-1 IP returned ${res.status}`);
+      return null;
+    }
+    const data = await res.json();
+    return Array.isArray(data) ? data : null;
+  } catch (err: any) {
+    console.warn(`[wp-proxy] Tier-1 IP failed: ${err?.message}`);
+    return null;
+  }
+}
+
+/**
+ * Tier 2 — HTTPS via wp.pentacloudconsulting.com subdomain.
+ * Works after the subdomain is properly configured in Hostinger hosting panel.
+ */
+async function fetchSubdomain(path: string): Promise<any[] | null> {
+  try {
+    const url = `https://wp.pentacloudconsulting.com${path}`;
+    console.log(`[wp-proxy] Tier-2 subdomain: ${url}`);
+    const res = await fetch(url, {
+      headers: {
+        'Accept':     'application/json',
+        'User-Agent': 'Pentacloud-NextJS/1.0',
+      },
+      // @ts-expect-error — Next.js fetch cache hint
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) {
+      console.warn(`[wp-proxy] Tier-2 subdomain returned ${res.status}`);
+      return null;
+    }
+    const data = await res.json();
+    return Array.isArray(data) ? data : null;
+  } catch (err: any) {
+    console.warn(`[wp-proxy] Tier-2 subdomain failed: ${err?.message}`);
+    return null;
+  }
+}
+
+/**
+ * Tier 3 — HTTPS via root pentacloudconsulting.com.
+ * Works when the @ A record still points to Hostinger (before VPS migration).
+ */
+async function fetchRootDomain(path: string): Promise<any[] | null> {
+  try {
+    const url = `https://pentacloudconsulting.com${path}`;
+    console.log(`[wp-proxy] Tier-3 root domain: ${url}`);
+    const res = await fetch(url, {
+      headers: {
+        'Accept':     'application/json',
+        'User-Agent': 'Pentacloud-NextJS/1.0',
+      },
+      // @ts-expect-error — Next.js fetch cache hint
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) {
+      console.warn(`[wp-proxy] Tier-3 root returned ${res.status}`);
+      return null;
+    }
+    const data = await res.json();
+    return Array.isArray(data) ? data : null;
+  } catch (err: any) {
+    console.warn(`[wp-proxy] Tier-3 root failed: ${err?.message}`);
+    return null;
+  }
+}
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const domain = searchParams.get('domain') || 'pentacloud.in';
-  const slug = searchParams.get('slug');
+  const domain = searchParams.get('domain') || 'pentacloudconsulting.com';
+  const slug   = searchParams.get('slug');
 
-  // Resolve base URL — only allow whitelisted domains
-  const baseUrl = ALLOWED_DOMAINS[domain] || FALLBACK_BASE;
+  const path = wpPath(slug);
 
-  let wpUrl: string;
-  if (slug) {
-    wpUrl = `${baseUrl}/wp-json/wp/v2/posts?slug=${encodeURIComponent(slug)}&_embed`;
-  } else {
-    wpUrl = `${baseUrl}/wp-json/wp/v2/posts?_embed&per_page=100`;
-  }
+  // ── Run all 3 tiers in order; stop at first success ─────────────
+  const data =
+    (await fetchDirectIP(path)) ??
+    (await fetchSubdomain(path)) ??
+    (await fetchRootDomain(path));
 
-  try {
-    const res = await fetch(wpUrl, {
-      headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'Pentacloud-NextJS/1.0',
-      },
-      next: { revalidate: 60 }, // Cache for 60 seconds
-    });
-
-    if (!res.ok) {
-      // If primary domain fails and it's not already the fallback, try pentacloud.in
-      if (baseUrl !== FALLBACK_BASE) {
-        const fallbackUrl = slug
-          ? `${FALLBACK_BASE}/wp-json/wp/v2/posts?slug=${encodeURIComponent(slug)}&_embed`
-          : `${FALLBACK_BASE}/wp-json/wp/v2/posts?_embed&per_page=100`;
-
-        const fallbackRes = await fetch(fallbackUrl, {
-          headers: { 'Accept': 'application/json', 'User-Agent': 'Pentacloud-NextJS/1.0' },
-          next: { revalidate: 60 },
-        });
-
-        if (fallbackRes.ok) {
-          const fallbackData = await fallbackRes.json();
-          return NextResponse.json(
-            { data: fallbackData, source: 'pentacloud.in', fallback: true },
-            {
-              headers: {
-                'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
-                'Access-Control-Allow-Origin': '*',
-              }
-            }
-          );
-        }
-      }
-
-      return NextResponse.json(
-        { error: `WordPress API returned ${res.status}`, data: [], source: domain },
-        { status: res.status }
-      );
-    }
-
-    const data = await res.json();
+  if (data) {
     return NextResponse.json(
       { data, source: domain, fallback: false },
-      {
-        headers: {
-          'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
-          'Access-Control-Allow-Origin': '*',
-        }
-      }
-    );
-  } catch (err: any) {
-    console.error(`[wp-blogs proxy] Error fetching from ${baseUrl}:`, err?.message || err);
-
-    // Network error fallback
-    if (baseUrl !== FALLBACK_BASE) {
-      try {
-        const fallbackUrl = slug
-          ? `${FALLBACK_BASE}/wp-json/wp/v2/posts?slug=${encodeURIComponent(slug)}&_embed`
-          : `${FALLBACK_BASE}/wp-json/wp/v2/posts?_embed&per_page=100`;
-
-        const fallbackRes = await fetch(fallbackUrl, {
-          headers: { 'Accept': 'application/json', 'User-Agent': 'Pentacloud-NextJS/1.0' },
-          next: { revalidate: 60 },
-        });
-
-        if (fallbackRes.ok) {
-          const fallbackData = await fallbackRes.json();
-          return NextResponse.json(
-            { data: fallbackData, source: 'pentacloud.in', fallback: true }
-          );
-        }
-      } catch {
-        // ignore
-      }
-    }
-
-    return NextResponse.json(
-      { error: 'Failed to fetch blogs', data: [], source: domain },
-      { status: 500 }
+      { headers: CACHE_HEADERS }
     );
   }
+
+  // All tiers failed
+  console.error(`[wp-proxy] All 3 fetch tiers failed for domain: ${domain}, path: ${path}`);
+  return NextResponse.json(
+    { error: 'WordPress API unreachable on all fallback tiers', data: [], source: domain },
+    { status: 500 }
+  );
 }

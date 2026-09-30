@@ -14,6 +14,12 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
       {
+        // WordPress media served from the wp subdomain (Hostinger Shared Hosting)
+        protocol: 'https',
+        hostname: 'wp.pentacloudconsulting.com',
+        pathname: '/**',
+      },
+      {
         protocol: 'https',
         hostname: 'images.unsplash.com',
         pathname: '/**',

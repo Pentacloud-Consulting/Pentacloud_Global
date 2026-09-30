@@ -26,16 +26,19 @@ Follow these steps whenever you add new features or update code for **`pentaclou
 Run these commands in your VS Code Terminal:
 
 ```powershell
-# 1. Check modified files
+# 1. Test build locally first to catch any TypeScript / syntax errors early
+npm run build
+
+# 2. Check modified files
 git status
 
-# 2. Stage all changes
+# 3. Stage all changes
 git add -A
 
-# 3. Commit your changes with a clear message
+# 4. Commit your changes with a clear message
 git commit -m "Feature: your update description"
 
-# 4. Push code to GitHub
+# 5. Push code to GitHub
 git push origin main
 ```
 
@@ -46,19 +49,23 @@ git push origin main
 Open your terminal (PowerShell / CMD) and SSH into your VPS:
 
 ```bash
-# 1. Connect to VPS
+# Connect to VPS (Use SSH Keys or credentials)
 ssh root@31.97.207.239
 ```
-*(Password: `Pentacloud@2026`)*
+
+> 💡 *Security Note: Use SSH Key authentication (`ssh-copy-id root@31.97.207.239`) to avoid storing plain text passwords in repository files.*
 
 Once connected, run these commands **one by one**:
 
 ```bash
-# 2. Navigate to India project directory
+# 1. Navigate to India project directory
 cd /var/www/pentacloud-india
 
-# 3. Pull latest code from GitHub
+# 2. Pull latest code from GitHub
 git pull origin main
+
+# 3. Check / update .env.local if new environment variables were added
+# nano .env.local (if needed)
 
 # 4. Install dependencies (if new npm packages were added)
 npm install --legacy-peer-deps
@@ -68,6 +75,9 @@ NODE_OPTIONS="--max-old-space-size=3072" npm run build
 
 # 6. Restart the pentacloud-in process under PM2
 pm2 restart pentacloud-in
+
+# 7. Save PM2 state so the site auto-restarts on server reboot
+pm2 save
 ```
 
 ---
@@ -81,9 +91,12 @@ After restarting PM2, verify that everything is running smoothly:
 pm2 status
 
 # View live logs for pentacloud.in to confirm zero errors
-pm2 logs pentacloud-in --lines 30
+pm2 logs pentacloud-in --lines 30 --nostream
 
-# Test Nginx status
+# Test local HTTP response on port 4001
+curl -I http://localhost:4001
+
+# Test Nginx syntax and status
 nginx -t
 ```
 
@@ -100,21 +113,27 @@ cd /var/www/pentacloud-india
 # 2. Revert to previous git commit
 git reset --hard HEAD~1
 
-# 3. Rebuild previous version
+# 3. Sync dependencies for the reverted commit
+npm install --legacy-peer-deps
+
+# 4. Rebuild previous version
 NODE_OPTIONS="--max-old-space-size=3072" npm run build
 
-# 4. Restart PM2 process
+# 5. Restart PM2 process & save state
 pm2 restart pentacloud-in
+pm2 save
 ```
 
 ---
 
 ## 📌 Summary Checklist for Future Updates
 
-- [ ] Tested code locally (`npm run dev` / `npm run build`)
-- [ ] Pushed to GitHub (`git push origin main`)
+- [ ] Tested code build locally (`npm run build`)
+- [ ] Pushed code to GitHub (`git push origin main`)
 - [ ] SSH into VPS (`ssh root@31.97.207.239`)
 - [ ] Pulled latest code in `/var/www/pentacloud-india`
+- [ ] Verified `.env.local` configuration on server (if env variables changed)
 - [ ] Rebuilt with memory flag `NODE_OPTIONS="--max-old-space-size=3072"`
-- [ ] Restarted PM2 (`pm2 restart pentacloud-in`)
+- [ ] Restarted PM2 & saved process list (`pm2 restart pentacloud-in && pm2 save`)
 - [ ] Verified live site at [https://pentacloud.in](https://pentacloud.in)
+

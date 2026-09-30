@@ -1,7 +1,8 @@
 export interface DomainConfig {
   domainName: string;
   siteTitle: string;
-  wpApiUrl: string;
+  wpApiUrl: string;         // URL Next.js uses to call WP REST API (server-side)
+  wpApiUrlClient: string;   // URL used for the /api/wp-blogs proxy (client-side)
   canonicalBase: string;
   contactEmail: string;
   contactPhone: string;
@@ -9,9 +10,15 @@ export interface DomainConfig {
 
 /**
  * Detects active domain from a hostname string.
- * Supports:
- *   1. pentacloudconsulting.com  → "Pentacloud Consulting"
- *   2. pentacloud.in (default)   → "Pentacloud Consulting India"
+ *
+ * │ Domain                    │ WP API URL                           │ Notes                              │
+ * ├───────────────────────────┼──────────────────────────────────────┼─────────────────────────────────────├
+ * │ pentacloud.in             │ https://wp.pentacloudconsulting.com │ WP lives on Hostinger subdomain    │
+ * │ pentacloudconsulting.com  │ https://wp.pentacloudconsulting.com │ wp subdomain → Hostinger 82.x.x.x │
+ *
+ * The “wp” subdomain (A record → 82.180.142.220) stays on Hostinger Shared Hosting.
+ * The “@” and “www” A records point to the VPS (31.97.207.239).
+ * This ensures that server-side fetch(…/wp-json/…) NEVER loops back to Next.js.
  */
 export function getDomainConfig(host?: string): DomainConfig {
   let hostname = host || '';
@@ -21,11 +28,15 @@ export function getDomainConfig(host?: string): DomainConfig {
 
   const isIndia = hostname.endsWith('.in') || hostname.includes('pentacloud.in');
 
+  // wp.pentacloudconsulting.com → Hostinger Shared IP (stays there always)
+  const WP_API = 'https://wp.pentacloudconsulting.com';
+
   if (isIndia) {
     return {
       domainName: 'pentacloud.in',
       siteTitle: 'Pentacloud Consulting India',
-      wpApiUrl: 'https://pentacloudconsulting.com',
+      wpApiUrl: WP_API,
+      wpApiUrlClient: 'pentacloudconsulting.com',
       canonicalBase: 'https://pentacloud.in',
       contactEmail: 'contactus@pentacloudconsulting.com',
       contactPhone: '+91 8147897286',
@@ -35,7 +46,8 @@ export function getDomainConfig(host?: string): DomainConfig {
   return {
     domainName: 'pentacloudconsulting.com',
     siteTitle: 'Pentacloud Consulting',
-    wpApiUrl: 'https://pentacloudconsulting.com',
+    wpApiUrl: WP_API,
+    wpApiUrlClient: 'pentacloudconsulting.com',
     canonicalBase: 'https://pentacloudconsulting.com',
     contactEmail: 'contactus@pentacloudconsulting.com',
     contactPhone: '+971 545 132 807',
@@ -74,14 +86,13 @@ export async function fetchBlogsForDomain(customHost?: string) {
 
       if (res.ok) return await res.json();
 
-      // Fallback to pentacloudconsulting.com
-      if (domain !== 'pentacloudconsulting.com') {
-        const fbRes = await fetch('https://pentacloudconsulting.com/wp-json/wp/v2/posts?_embed&per_page=100', {
-          headers: { 'Accept': 'application/json', 'User-Agent': 'Pentacloud-NextJS/1.0' },
-          next: { revalidate: 60 },
-        });
-        if (fbRes.ok) return await fbRes.json();
-      }
+      // Primary subdomain failed — try root pentacloudconsulting.com as fallback
+      const fbRes = await fetch('https://wp.pentacloudconsulting.com/wp-json/wp/v2/posts?_embed&per_page=100', {
+        headers: { 'Accept': 'application/json', 'User-Agent': 'Pentacloud-NextJS/1.0' },
+        next: { revalidate: 60 },
+      });
+      if (fbRes.ok) return await fbRes.json();
+
       return [];
     } else {
       // ── Client-side: use /api/wp-blogs proxy (avoids CORS) ──────
@@ -100,9 +111,9 @@ export async function fetchBlogsForDomain(customHost?: string) {
   } catch (err) {
     console.error(`[fetchBlogsForDomain] Error fetching blogs for ${domain}:`, err);
 
-    // Last-resort fallback — always use active WP domain
+    // Last-resort fallback — wp subdomain
     try {
-      const fbRes = await fetch('https://pentacloudconsulting.com/wp-json/wp/v2/posts?_embed&per_page=100', {
+      const fbRes = await fetch('https://wp.pentacloudconsulting.com/wp-json/wp/v2/posts?_embed&per_page=100', {
         headers: { 'Accept': 'application/json' },
         next: { revalidate: 60 },
       });
@@ -139,16 +150,14 @@ export async function fetchSingleBlogForDomain(slug: string, customHost?: string
         if (Array.isArray(posts) && posts.length > 0) return posts[0];
       }
 
-      // Fallback to cms.pentacloudconsulting.com
-      if (domain !== 'pentacloudconsulting.com') {
-        const fbRes = await fetch(`https://cms.pentacloudconsulting.com/wp-json/wp/v2/posts?slug=${encodeURIComponent(slug)}&_embed`, {
-          headers: { 'Accept': 'application/json', 'User-Agent': 'Pentacloud-NextJS/1.0' },
-          next: { revalidate: 60 },
-        });
-        if (fbRes.ok) {
-          const fbPosts = await fbRes.json();
-          if (Array.isArray(fbPosts) && fbPosts.length > 0) return fbPosts[0];
-        }
+      // Fallback: try root pentacloudconsulting.com directly
+      const fbRes = await fetch(`https://pentacloudconsulting.com/wp-json/wp/v2/posts?slug=${encodeURIComponent(slug)}&_embed`, {
+        headers: { 'Accept': 'application/json', 'User-Agent': 'Pentacloud-NextJS/1.0' },
+        next: { revalidate: 60 },
+      });
+      if (fbRes.ok) {
+        const fbPosts = await fbRes.json();
+        if (Array.isArray(fbPosts) && fbPosts.length > 0) return fbPosts[0];
       }
 
       return null;
