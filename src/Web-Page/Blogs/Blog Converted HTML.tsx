@@ -58,9 +58,15 @@ export function BlogConvertedHTML({ blog }: { blog: any }) {
     if (container) {
       container.addEventListener('click', handleLinkClick as any);
 
-      // Dynamically group post card blocks (if Elementor/WP inserted them as raw HTML elements)
+      // Dynamically group post card blocks (ONLY when explicit post recommendation cards exist)
       const allImgs = Array.from(container.querySelectorAll('img'));
       const cardPairs: { imgContainer: HTMLElement; titleEl: HTMLElement; learnMoreEl: HTMLElement | null }[] = [];
+
+      const isPostSlug = (url: string | null | undefined): boolean => {
+        if (!url) return false;
+        const lower = url.toLowerCase();
+        return lower.includes('/blogs/') || lower.includes('salesforce') || lower.includes('zoho') || lower.includes('cloud') || lower.includes('-in-');
+      };
 
       allImgs.forEach((img) => {
         const imgEl = img as HTMLImageElement;
@@ -85,20 +91,19 @@ export function BlogConvertedHTML({ blog }: { blog: any }) {
         }
 
         if (nextEl) {
-          const tagName = nextEl.tagName;
-          const hasLink = nextEl.querySelector('a') !== null;
-          const text = nextEl.textContent?.trim() || '';
+          let learnMoreEl = nextEl.nextElementSibling as HTMLElement | null;
+          const isLearnMore = learnMoreEl && (
+            learnMoreEl.textContent?.toLowerCase().includes('learn more') ||
+            learnMoreEl.textContent?.toLowerCase().includes('read more')
+          );
 
-          const isTitle = (['H1', 'H2', 'H3', 'H4', 'H5', 'P'].includes(tagName) && (hasLink || tagName.startsWith('H'))) && text.length > 5;
+          const imgLink = imgBox.querySelector('a')?.getAttribute('href') || imgBox.getAttribute('href');
+          const titleLink = nextEl.querySelector('a')?.getAttribute('href') || (nextEl.tagName === 'A' ? nextEl.getAttribute('href') : null);
 
-          if (isTitle) {
-            let learnMoreEl = nextEl.nextElementSibling as HTMLElement | null;
-            const isLearnMore = learnMoreEl && (
-              learnMoreEl.textContent?.toLowerCase().includes('learn more') ||
-              learnMoreEl.textContent?.toLowerCase().includes('read more') ||
-              (learnMoreEl.querySelector('a') !== null && (learnMoreEl.textContent?.trim().length || 0) < 30)
-            );
+          // A card pair MUST either have an explicit "Learn More" button or contain explicit blog post links
+          const isExplicitCard = isLearnMore || (isPostSlug(imgLink) && isPostSlug(titleLink) && ['H2', 'H3', 'H4', 'H5'].includes(nextEl.tagName));
 
+          if (isExplicitCard) {
             cardPairs.push({
               imgContainer: imgBox,
               titleEl: nextEl,
@@ -451,6 +456,7 @@ export function BlogConvertedHTML({ blog }: { blog: any }) {
             margin-bottom: 1.25rem !important;
             line-height: 1.3 !important;
             letter-spacing: -0.01em !important;
+            clear: both !important;
         }
         .pc-article-body h3 {
             font-size: 1.4rem !important;
@@ -459,21 +465,50 @@ export function BlogConvertedHTML({ blog }: { blog: any }) {
             margin-top: 2.25rem !important;
             margin-bottom: 1rem !important;
             line-height: 1.3 !important;
+            clear: both !important;
         }
         .pc-article-body p {
             font-size: 1.1rem !important;
             color: var(--pc-text-main) !important;
             margin: 0 0 1.5rem 0 !important;
+            width: 100% !important;
+            display: block !important;
+            clear: both !important;
         }
         .pc-article-body ul {
             margin: 0 0 1.5rem 0 !important;
             padding-left: 1.5rem !important;
             list-style-type: disc !important;
+            clear: both !important;
         }
         .pc-article-body li {
             font-size: 1.1rem !important;
             color: var(--pc-text-main) !important;
             margin-bottom: 0.5rem !important;
+        }
+
+        /* Standalone Article Body Images (Full width, clean, rounded) */
+        .blog-rich-content > figure,
+        .blog-rich-content > p > img,
+        .blog-rich-content > img,
+        .blog-rich-content .wp-block-image {
+            width: 100% !important;
+            max-width: 100% !important;
+            height: auto !important;
+            margin: 2rem 0 !important;
+            border-radius: 12px !important;
+            overflow: hidden !important;
+            display: block !important;
+            clear: both !important;
+        }
+        .blog-rich-content > figure img,
+        .blog-rich-content .wp-block-image img {
+            width: 100% !important;
+            height: auto !important;
+            max-height: 480px !important;
+            object-fit: cover !important;
+            border-radius: 12px !important;
+            display: block !important;
         }
 
         /* Universal WordPress / Elementor Posts Grid (All 3 small & clean in 1 line) */
