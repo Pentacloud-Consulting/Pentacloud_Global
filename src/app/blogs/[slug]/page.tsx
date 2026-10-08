@@ -27,7 +27,7 @@ function getGeo(location?: string) {
 }
 
 // ─── JSON-LD Article Schema ─────────────────────────────────────────────────────
-function buildArticleSchema(blog: any) {
+export function buildArticleSchema(blog: any) {
   const geo = getGeo(blog.location);
   const config = getDomainConfig();
   const url = blog.canonical_url || `${config.canonicalBase}/blogs/${blog.slug}`;
@@ -86,7 +86,7 @@ function buildArticleSchema(blog: any) {
   };
 }
 
-async function getWpPostBySlug(slug: string) {
+export async function getWpPostBySlug(slug: string) {
   // Try both domains — pentacloud.in first, then pentacloudconsulting.com
   // This ensures slugs from either WordPress site always resolve correctly.
   const domains = ['pentacloud.in', 'pentacloudconsulting.com'];
