@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import { ViewBlog } from '../../../Web-Page/Blogs/View Blog';
 import { fetchSingleBlogForDomain, getDomainConfig } from '../../../Web-Page/Blogs/Dynamic Change Blog';
-import { decodeHtmlEntities } from '../../../Web-Page/Blogs/Blog Saveed';
+import { decodeHtmlEntities, extractImageFromPost } from '../../../Web-Page/Blogs/Blog Saveed';
 
 interface BlogPostPageProps {
   params: Promise<{ slug: string }>;
@@ -96,7 +96,7 @@ async function getWpPostBySlug(slug: string) {
       const post = await fetchSingleBlogForDomain(slug, domain);
       if (!post) continue;
 
-      const featuredMedia = post._embedded?.['wp:featuredmedia']?.[0]?.source_url || '';
+      const featuredMedia = extractImageFromPost(post);
       const content = post.content?.rendered || '';
       const rawExcerpt = post.excerpt?.rendered ? post.excerpt.rendered.replace(/<[^>]*>?/gm, '').trim() : '';
       const excerpt = decodeHtmlEntities(rawExcerpt);

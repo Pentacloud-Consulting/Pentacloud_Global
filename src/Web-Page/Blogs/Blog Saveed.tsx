@@ -65,10 +65,10 @@ function stripHtml(html: string): string {
 }
 
 function resolveCategory(wpCategories: any[], title: string): string {
-  if (wpCategories.length > 0) {
-    const name = wpCategories[0]?.name;
-    if (name && name !== 'Blog' && name !== 'Uncategorized') {
-      return name;
+  if (Array.isArray(wpCategories) && wpCategories.length > 0) {
+    const validCat = wpCategories.find((c: any) => c?.name && c.name !== 'Blog' && c.name !== 'Uncategorized');
+    if (validCat?.name) {
+      return validCat.name;
     }
   }
 
@@ -80,18 +80,74 @@ function resolveCategory(wpCategories: any[], title: string): string {
   if (lowerTitle.includes('training')) return 'Salesforce Training';
   if (lowerTitle.includes('marketing')) return 'Salesforce Marketing';
   if (lowerTitle.includes('cloud')) return 'Cloud Solution';
+  if (lowerTitle.includes('web') || lowerTitle.includes('site')) return 'Web Development';
 
   return 'Salesforce Consulting';
 }
 
+export function extractImageFromPost(post: any): string {
+  if (!post) return 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800';
+
+  // 1. Featured Media via _embedded (WP Featured Image)
+  const featuredMedia = post._embedded?.['wp:featuredmedia']?.[0];
+  if (featuredMedia) {
+    if (featuredMedia.source_url) return featuredMedia.source_url;
+    
+    const sizes = featuredMedia.media_details?.sizes;
+    if (sizes) {
+      const bestSize = sizes.full || sizes.large || sizes.medium_large || sizes.medium;
+      if (bestSize?.source_url) return bestSize.source_url;
+    }
+
+    if (featuredMedia.guid?.rendered) {
+      return featuredMedia.guid.rendered;
+    }
+  }
+
+  // 2. Scan content HTML & excerpt HTML for all possible image attributes (src, data-src, srcset)
+  const htmlSources = [post.content?.rendered, post.excerpt?.rendered].filter(Boolean);
+
+  for (const html of htmlSources) {
+    if (!html) continue;
+
+    // A) Try src / data-src / data-lazy-src attributes
+    const srcMatch = html.match(/<img[^>]+(?:src|data-src|data-lazy-src|data-original)=["']([^"']+)["']/i);
+    if (srcMatch && srcMatch[1]) {
+      let url = decodeHtmlEntities(srcMatch[1].trim());
+      if (url.startsWith('//')) url = 'https:' + url;
+      else if (url.startsWith('/')) url = 'https://wp.pentacloudconsulting.com' + url;
+      if (url.startsWith('http')) return url;
+    }
+
+    // B) Try srcset attribute (pick first/largest candidate URL)
+    const srcsetMatch = html.match(/<img[^>]+srcset=["']([^"']+)["']/i);
+    if (srcsetMatch && srcsetMatch[1]) {
+      const candidates = srcsetMatch[1].split(',').map((s: string) => s.trim().split(/\s+/)[0]);
+      if (candidates.length > 0 && candidates[0]) {
+        let url = decodeHtmlEntities(candidates[0]);
+        if (url.startsWith('//')) url = 'https:' + url;
+        else if (url.startsWith('/')) url = 'https://wp.pentacloudconsulting.com' + url;
+        if (url.startsWith('http')) return url;
+      }
+    }
+  }
+
+  // 3. Fallback default image if post has no image anywhere
+  return 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800';
+}
+
 function normalizeWpPost(post: any, index: number): PublicBlog {
   const title = post.title?.rendered ? stripHtml(post.title.rendered) : 'Untitled';
-  const rawExcerpt = post.excerpt?.rendered ? stripHtml(post.excerpt.rendered) : '';
+  
+  // Clean excerpt with auto-generation from content if empty
+  let rawExcerpt = post.excerpt?.rendered ? stripHtml(post.excerpt.rendered) : '';
+  if (!rawExcerpt && post.content?.rendered) {
+    rawExcerpt = stripHtml(post.content.rendered);
+  }
   const excerpt = rawExcerpt.slice(0, 160) + (rawExcerpt.length > 160 ? '...' : '');
 
-  // Extract featured image from _embedded if present
-  const featuredMedia = post._embedded?.['wp:featuredmedia']?.[0];
-  const image = featuredMedia?.source_url || 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800';
+  // Extract real featured image or content image
+  const image = extractImageFromPost(post);
 
   // Extract category dynamically
   const wpCategories = post._embedded?.['wp:term']?.[0] || [];
