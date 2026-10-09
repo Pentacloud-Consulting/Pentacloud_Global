@@ -1,13 +1,21 @@
 import { NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   const baseUrl = 'https://pentacloud.in';
 
   let posts: any[] = [];
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
     const res = await fetch('https://pentacloudconsulting.com/wp-json/wp/v2/posts?_embed&per_page=100', {
+      signal: controller.signal,
       next: { revalidate: 3600 }
     });
+    clearTimeout(timeoutId);
+
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data)) posts = data;
