@@ -65,6 +65,8 @@ export default function ResumeView({
     fileName: "",
   });
 
+  const [fileStatus, setFileStatus] = useState<"checking" | "valid" | "not_found">("checking");
+
   useEffect(() => {
     // Determine details from search params or slug
     if (typeof window !== "undefined") {
@@ -87,12 +89,9 @@ export default function ResumeView({
         extractedFileName = cleanSlug.split("/").pop() || "Resume.pdf";
         
         if (!targetFileUrl) {
-          // Check if file is stored in public uploads or resumes path
-          targetFileUrl = `/uploads/resumes/${extractedFileName}`;
+          targetFileUrl = `/api/uploads/resumes/${extractedFileName}`;
         }
 
-        // Try to parse candidate name and position from filename if not provided
-        // e.g. "sakshi-salesforce--ba-resume..pdf" -> Name: "Sakshi", Position: "Salesforce BA"
         if (!parsedName) {
           const parts = extractedFileName.replace(/\.(pdf|doc|docx|png|jpg|jpeg)$/i, "").split("-").filter(Boolean);
           if (parts.length > 0) {
@@ -114,10 +113,7 @@ export default function ResumeView({
         extractedFileName = targetFileUrl.split("/").pop()?.split("?")[0] || extractedFileName;
       }
 
-      // Route all local uploads through /api/uploads/resumes/ to bypass Next.js static asset 404
-      if (targetFileUrl.includes("/uploads/resumes/")) {
-        targetFileUrl = `/api/uploads/resumes/${extractedFileName}`;
-      } else if (!targetFileUrl.startsWith("http") && !targetFileUrl.startsWith("/api/")) {
+      if (targetFileUrl && !targetFileUrl.startsWith("http") && !targetFileUrl.startsWith("/api/")) {
         targetFileUrl = `/api/uploads/resumes/${extractedFileName}`;
       }
 
@@ -130,6 +126,22 @@ export default function ResumeView({
         date: urlDate,
         fileName: extractedFileName,
       });
+
+      // Verify file existence on server
+      if (targetFileUrl) {
+        setFileStatus("checking");
+        fetch(targetFileUrl, { method: "HEAD" })
+          .then((res) => {
+            if (res.ok && res.status === 200) {
+              setFileStatus("valid");
+            } else {
+              setFileStatus("not_found");
+            }
+          })
+          .catch(() => setFileStatus("not_found"));
+      } else {
+        setFileStatus("not_found");
+      }
     }
   }, [initialFileUrl, initialName, initialEmail, initialPhone, initialPosition, initialDate, slug]);
 
@@ -352,14 +364,18 @@ export default function ResumeView({
           {/* Document Preview Box */}
           <div className="bg-slate-100 min-h-[600px] sm:min-h-[750px] flex items-center justify-center p-2 sm:p-6 relative overflow-auto">
             
-            {meta.fileUrl ? (
+            {fileStatus === "checking" ? (
+              <div className="flex flex-col items-center justify-center space-y-3 py-20">
+                <div className="w-10 h-10 border-4 border-[#1A7FD4] border-t-transparent rounded-full animate-spin" />
+                <span className="text-xs font-semibold text-[#4A6080]">Loading applicant resume preview...</span>
+              </div>
+            ) : fileStatus === "valid" ? (
               isPdf ? (
                 <div className="w-full h-[650px] sm:h-[800px] bg-white rounded-xl shadow-inner border border-slate-200 overflow-hidden relative">
                   <iframe
                     src={`${meta.fileUrl}#toolbar=1&navpanes=0&zoom=${zoomLevel}`}
                     className="w-full h-full border-none"
                     title="Resume PDF Viewer"
-                    onError={() => setFileError(true)}
                   />
                 </div>
               ) : isImage ? (
@@ -393,16 +409,16 @@ export default function ResumeView({
                 </div>
               )
             ) : (
-              /* Fallback Card when file URL is not yet connected */
+              /* Informative Card when legacy file wasn't stored on server */
               <div className="max-w-xl w-full bg-white p-8 sm:p-10 rounded-2xl border border-slate-200 text-center shadow-lg my-8">
                 <div className="w-16 h-16 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-amber-200/60">
                   <AlertCircle size={32} />
                 </div>
                 <h3 className="text-xl font-nunito font-black text-[#0D1B2A] mb-2">
-                  Resume Details Loaded
+                  Application Record Verified
                 </h3>
                 <p className="text-xs sm:text-sm text-[#4A6080] mb-6 leading-relaxed max-w-md mx-auto">
-                  Application record for <strong>{meta.name}</strong> ({meta.position}) was found. You can reach out directly or request the attached file from your email inbox.
+                  Application record for <strong className="text-[#0D1B2A]">{meta.name}</strong> ({meta.position}) is active. The original PDF file was sent via email before automatic server hosting was configured.
                 </p>
 
                 <div className="bg-slate-50 p-4 rounded-xl text-left border border-slate-200 text-xs space-y-2 mb-6 font-mono">
@@ -413,20 +429,24 @@ export default function ResumeView({
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <a
-                    href={`mailto:${meta.email}?subject=Resume%20Copy%20Request`}
-                    className="flex-1 py-3 px-4 rounded-xl bg-[#1A7FD4] text-white font-extrabold text-xs flex items-center justify-center gap-2 hover:bg-blue-600 transition-colors"
-                  >
-                    <Mail size={15} />
-                    <span>Email Applicant</span>
-                  </a>
-                  <button
-                    onClick={handleDownload}
-                    className="flex-1 py-3 px-4 rounded-xl bg-slate-100 text-[#0D1B2A] font-extrabold text-xs flex items-center justify-center gap-2 hover:bg-slate-200 transition-colors"
-                  >
-                    <Download size={15} />
-                    <span>Download File</span>
-                  </button>
+                  {meta.email && meta.email !== "Not provided" && (
+                    <a
+                      href={`mailto:${meta.email}?subject=Pentacloud%20Application%20Follow-up`}
+                      className="flex-1 py-3 px-4 rounded-xl bg-[#1A7FD4] text-white font-extrabold text-xs flex items-center justify-center gap-2 hover:bg-blue-600 transition-colors shadow-sm"
+                    >
+                      <Mail size={15} />
+                      <span>Email Candidate ({meta.email})</span>
+                    </a>
+                  )}
+                  {meta.phone && meta.phone !== "Not provided" && (
+                    <a
+                      href={`tel:${meta.phone}`}
+                      className="flex-1 py-3 px-4 rounded-xl bg-emerald-600 text-white font-extrabold text-xs flex items-center justify-center gap-2 hover:bg-emerald-700 transition-colors shadow-sm"
+                    >
+                      <Phone size={15} />
+                      <span>Call Candidate ({meta.phone})</span>
+                    </a>
+                  )}
                 </div>
               </div>
             )}
