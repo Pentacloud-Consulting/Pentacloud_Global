@@ -89,22 +89,18 @@ export default function ContactResumeForm({ activeTab, onTabChange }: any) {
     setErrorMessage("");
 
     try {
-      // Simulate network request
-      await new Promise(res => setTimeout(res, 1200));
-
-      // Call our own server-side API route (avoids browser network restrictions)
-      const fakeResumeUrl = `https://pentacloud.in/resumes/${formData.resumeFile.name.replace(/\s+/g, '-').toLowerCase()}`;
+      const fd = new FormData();
+      fd.append("name", formData.name);
+      fd.append("email", formData.email);
+      fd.append("phone", formData.phone);
+      fd.append("position", formData.position);
+      if (formData.resumeFile) {
+        fd.append("resume", formData.resumeFile);
+      }
 
       const res = await fetch('/api/contact/submit-career', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          phone: formData.phone,
-          position: formData.position,
-          resumeUrl: fakeResumeUrl,
-        }),
+        body: fd,
       });
 
       const data = await res.json();
