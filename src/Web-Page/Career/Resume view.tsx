@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { 
   Download, 
   FileText, 
@@ -113,6 +114,13 @@ export default function ResumeView({
         extractedFileName = targetFileUrl.split("/").pop()?.split("?")[0] || extractedFileName;
       }
 
+      // Route all local uploads through /api/uploads/resumes/ to bypass Next.js static asset 404
+      if (targetFileUrl.includes("/uploads/resumes/")) {
+        targetFileUrl = `/api/uploads/resumes/${extractedFileName}`;
+      } else if (!targetFileUrl.startsWith("http") && !targetFileUrl.startsWith("/api/")) {
+        targetFileUrl = `/api/uploads/resumes/${extractedFileName}`;
+      }
+
       setMeta({
         fileUrl: targetFileUrl,
         name: parsedName || "Applicant",
@@ -173,17 +181,17 @@ export default function ResumeView({
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-[#1A7FD4]/10 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#1A7FD4] to-[#0D1B2A] flex items-center justify-center text-white font-nunito font-black text-xl shadow-[0_4px_12px_rgba(26,127,212,0.3)] group-hover:scale-105 transition-transform">
-              P
-            </div>
-            <div>
-              <span className="font-nunito font-black text-base sm:text-lg text-[#0D1B2A] tracking-tight block">
-                Pentacloud <span className="text-[#1A7FD4]">Consulting</span>
-              </span>
-              <span className="text-[10px] font-bold text-[#4A6080] uppercase tracking-wider block">
-                Career Application Viewer
-              </span>
-            </div>
+            <Image 
+              src="/Logo/Pentacloud logo.png" 
+              alt="Pentacloud Logo" 
+              width={180} 
+              height={45} 
+              className="h-9 sm:h-11 w-auto object-contain transition-transform duration-300 group-hover:scale-105" 
+            />
+            <span className="hidden sm:block h-5 w-px bg-slate-200" />
+            <span className="text-[10px] font-bold text-[#4A6080] uppercase tracking-wider hidden sm:block">
+              Career Application Viewer
+            </span>
           </Link>
 
           <div className="flex items-center gap-2 sm:gap-3">

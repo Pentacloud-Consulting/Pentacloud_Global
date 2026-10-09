@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
         await mkdir(uploadDir, { recursive: true });
         const filePath = path.join(uploadDir, fileName);
         await writeFile(filePath, fileBuffer);
-        publicFileUrl = `/uploads/resumes/${fileName}`;
+        publicFileUrl = `/api/uploads/resumes/${fileName}`;
       } catch (fsErr) {
         console.warn('⚠️ FS save error:', fsErr);
       }
